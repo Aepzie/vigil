@@ -179,7 +179,9 @@ func (b *syncBuffer) Len() int {
 }
 
 func TestIdleSessionIsClosed(t *testing.T) {
-	ts := startServer(t, func(c *Config) { c.IdleTimeout = 2 * time.Second })
+	// The idle timeout also covers the SSH handshake, and a bcrypt login
+	// under -race on a slow CI runner can take a few seconds.
+	ts := startServer(t, func(c *Config) { c.IdleTimeout = 8 * time.Second })
 	c := ts.login(t)
 	sess, stdout, _ := openTUI(t, c)
 	waitFor(t, "dashboard output", func() bool { return stdout.Len() > 0 })
@@ -187,7 +189,7 @@ func TestIdleSessionIsClosed(t *testing.T) {
 	go func() { done <- sess.Wait() }()
 	select {
 	case <-done:
-	case <-time.After(10 * time.Second):
+	case <-time.After(30 * time.Second):
 		t.Fatal("idle session was not closed")
 	}
 }
