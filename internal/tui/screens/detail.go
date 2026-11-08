@@ -8,6 +8,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/CraguS/vigil/internal/format"
 	"github.com/CraguS/vigil/internal/metrics"
@@ -28,6 +29,12 @@ const (
 	detailSideMinW   = 76
 	detailChartMinH  = 8
 	detailChartMaxH  = 12
+
+	// detailFullHeaderMinH is the content height from which the header
+	// is a bordered panel; below it a compact two-line header is used,
+	// and below detailTwoLineHeaderMinH a single line.
+	detailFullHeaderMinH    = 24
+	detailTwoLineHeaderMinH = 12
 )
 
 // detailAction is a palette-triggered action of the Detail screen.
@@ -233,11 +240,7 @@ func (s *detail) View(width, height int) string {
 		})
 	}
 	v := s.resolve(row)
-	headerH := 4
-	if height < 14 {
-		headerH = 3
-	}
-	headerH = min(headerH, height)
+	headerH := detailHeaderHeight(height)
 	blocks := []string{s.header(v, width, headerH)}
 	if rest := height - headerH; rest > 0 {
 		blocks = append(blocks, s.body(v, width, rest))
@@ -245,8 +248,57 @@ func (s *detail) View(width, height int) string {
 	return widgets.Fit(widgets.JoinV(blocks...), width, height)
 }
 
-// header renders name, status and the identity/health lines.
-func (s *detail) header(v detailView, w, h int) string {
+// detailHeaderHeight is the height of the header for a content area h
+// rows tall: a bordered panel with two lines when there is room, a
+// compact borderless header otherwise.
+func detailHeaderHeight(h int) int {
+	switch {
+	case h >= detailFullHeaderMinH:
+		return 4
+	case h >= detailTwoLineHeaderMinH:
+		return 2
+	default:
+		return min(h, 1)
+	}
+}
+
+// rankedField is one part of a header line. Fields with a higher rank are
+// less important and dropped first when the line is too narrow.
+type rankedField struct {
+	text string
+	rank int
+}
+
+// fitFields joins the non-empty fields with dots into a line of at most w
+// cells. While the line is too wide the least important field is
+// dropped; a single remaining field is truncated with "…".
+func fitFields(t *theme.Theme, w int, fields []rankedField) string {
+	kept := slices.DeleteFunc(slices.Clone(fields), func(f rankedField) bool { return f.text == "" })
+	join := func() string {
+		parts := make([]string, len(kept))
+		for i, f := range kept {
+			parts[i] = f.text
+		}
+		return joinDots(t, parts...)
+	}
+	for len(kept) > 1 && ansi.StringWidth(join()) > w {
+		worst := 0
+		for i, f := range kept {
+			if f.rank >= kept[worst].rank {
+				worst = i
+			}
+		}
+		kept = slices.Delete(kept, worst, worst+1)
+	}
+	line := join()
+	if ansi.StringWidth(line) > w {
+		return widgets.FitLine(line, w)
+	}
+	return line
+}
+
+// identityFields describes where the server is and what it runs.
+func (s *detail) identityFields(v detailView) []rankedField {
 	t := s.t
 	snap := v.snap
 	srv := v.row.Srv
@@ -254,23 +306,29 @@ func (s *detail) header(v detailView, w, h int) string {
 	if srv.Port != 0 && srv.Port != defaultSSHPort {
 		addr = hostPort(addr, srv.Port)
 	}
-	identity := joinDots(t,
-		fg(t.P.Text, clean(srv.User)+"@"+addr),
-		fg(t.P.Muted, clean(snap.Hostname)),
-		fg(t.P.Muted, clean(snap.OS)),
-		fg(t.P.Faint, clean(snap.Kernel)),
-		coresText(t, snap.CPUCount),
-	)
-	var health string
+	return []rankedField{
+		{fg(t.P.Text, clean(srv.User)+"@"+addr), 0},
+		{fg(t.P.Muted, clean(snap.Hostname)), 3},
+		{fg(t.P.Muted, clean(snap.OS)), 1},
+		{fg(t.P.Faint, clean(snap.Kernel)), 4},
+		{coresText(t, snap.CPUCount), 2},
+	}
+}
+
+// healthFields describes how the server is doing right now.
+func (s *detail) healthFields(v detailView) []rankedField {
+	t := s.t
+	snap := v.snap
 	switch {
 	case v.row.Online():
-		health = joinDots(t,
-			labelValue(t, "up", fg(t.P.Text, format.Duration(snap.Uptime))),
-			labelValue(t, "latency", fg(t.P.Text, format.Latency(snap.Latency))),
-			labelValue(t, "load", fg(t.P.Text, loadText(snap.Load.One)+" "+loadText(snap.Load.Five)+" "+loadText(snap.Load.Fifteen))),
-			fg(t.P.Accent2, glyphDown+" "+format.Bits(snap.Net.RxBps))+" "+fg(t.P.Accent, glyphUp+" "+format.Bits(snap.Net.TxBps)),
-			fg(t.P.Faint, "polled "+format.Ago(v.row.Snap.At, s.fleet.Now)),
-		)
+		load := loadText(snap.Load.One) + " " + loadText(snap.Load.Five) + " " + loadText(snap.Load.Fifteen)
+		return []rankedField{
+			{labelValue(t, "up", fg(t.P.Text, format.Duration(snap.Uptime))), 0},
+			{labelValue(t, "latency", fg(t.P.Text, format.Latency(snap.Latency))), 2},
+			{labelValue(t, "load", fg(t.P.Text, load)), 1},
+			{fg(t.P.Accent2, glyphDown+" "+format.Bits(snap.Net.RxBps)) + " " + fg(t.P.Accent, glyphUp+" "+format.Bits(snap.Net.TxBps)), 4},
+			{fg(t.P.Faint, "polled "+format.Ago(v.row.Snap.At, s.fleet.Now)), 3},
+		}
 	case v.row.Has && v.row.Snap.State == metrics.StateOffline:
 		reason := clean(v.row.Snap.Err)
 		if reason == "" {
@@ -280,20 +338,42 @@ func (s *detail) header(v detailView, w, h int) string {
 		if v.dim {
 			stale = fg(t.P.Faint, "showing last known values")
 		}
-		health = joinDots(t,
-			fg(t.P.Bad, bold(glyphCross+" "+reason)),
-			fg(t.P.Muted, "last seen "+format.Ago(v.row.Snap.LastSeen, s.fleet.Now)),
-			stale,
-		)
-	default:
-		health = fg(t.P.Muted, "waiting for the first poll…")
-	}
-	lines := []string{identity, health}
-	if h < 4 {
-		lines = []string{health}
-		if v.row.Online() {
-			lines = []string{joinDots(t, identity, health)}
+		return []rankedField{
+			{fg(t.P.Bad, bold(glyphCross+" "+reason)), 0},
+			{fg(t.P.Muted, "last seen "+format.Ago(v.row.Snap.LastSeen, s.fleet.Now)), 1},
+			{stale, 2},
 		}
+	default:
+		return []rankedField{{fg(t.P.Muted, "waiting for the first poll…"), 0}}
+	}
+}
+
+// compactHeader renders the name, status badge and identity on the first
+// line and the health on the second; with a single line the health
+// follows the badge.
+func (s *detail) compactHeader(v detailView, w, h int) string {
+	t := s.t
+	lead := " " + fg(t.P.Text, bold(v.row.Name())) + " " + widgets.Badge(t, v.row.Status.Label, v.row.Status.Tone) + " "
+	room := max(w-ansi.StringWidth(lead)-1, 0)
+	if h < 2 {
+		return widgets.FitLine(lead+fitFields(t, room, s.healthFields(v)), w)
+	}
+	first := widgets.FitLine(lead+fitFields(t, room, s.identityFields(v)), w)
+	second := widgets.FitLine(" "+fitFields(t, max(w-2, 0), s.healthFields(v)), w)
+	return widgets.Fit(first+"\n"+second, w, h)
+}
+
+// header renders name, status and the identity/health lines: a bordered
+// panel when h ≥ 4, otherwise one or two borderless lines.
+func (s *detail) header(v detailView, w, h int) string {
+	t := s.t
+	if h < 4 {
+		return s.compactHeader(v, w, h)
+	}
+	iw, _ := widgets.PanelInner(w, h)
+	lines := []string{
+		fitFields(t, iw, s.identityFields(v)),
+		fitFields(t, iw, s.healthFields(v)),
 	}
 	return widgets.Panel(t, widgets.PanelOpts{
 		Width:   w,
