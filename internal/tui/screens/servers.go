@@ -60,6 +60,8 @@ type serverSavedMsg struct {
 	srv    store.Server
 	edited bool
 	err    error
+	// seq identifies the form that started the save (serverForm.seq).
+	seq int
 }
 
 // serverDeletedMsg is the result of a delete.
@@ -87,6 +89,9 @@ type serverForm struct {
 	form
 	// orig is the edited server; its ID is empty when adding.
 	orig store.Server
+	// seq tells save results of this form apart from those of forms
+	// closed while their save was in flight.
+	seq int
 }
 
 // servers manages the inventory.
@@ -97,6 +102,8 @@ type servers struct {
 	selected string
 	form     *serverForm
 	confirm  *confirmDialog
+	// formSeq numbers the forms opened so far.
+	formSeq int
 }
 
 func newServers(d *ui.Deps) *servers {
@@ -257,7 +264,7 @@ func (s *servers) openAdd() tea.Cmd {
 	if limit := s.maxServers(); limit > 0 && len(s.fleet.Servers) >= limit {
 		return ui.Toast(theme.ToneWarn, serverLimitError(limit).Error())
 	}
-	s.form = newServerForm("Add server", store.Server{})
+	s.openForm(newServerForm("Add server", store.Server{}))
 	return nil
 }
 
@@ -269,8 +276,15 @@ func (s *servers) openEdit() tea.Cmd {
 	if !ok {
 		return nil
 	}
-	s.form = newServerForm("Edit "+clean(srv.Name), srv)
+	s.openForm(newServerForm("Edit "+clean(srv.Name), srv))
 	return nil
+}
+
+// openForm shows f with a new sequence number.
+func (s *servers) openForm(f *serverForm) {
+	s.formSeq++
+	f.seq = s.formSeq
+	s.form = f
 }
 
 func (s *servers) openDelete() tea.Cmd {
@@ -343,7 +357,7 @@ func (s *servers) submit() tea.Cmd {
 		return nil
 	}
 	f.busy = true
-	return saveServerCmd(s.d, srv, f.orig.ID != "")
+	return saveServerCmd(s.d, srv, f.orig.ID != "", f.seq)
 }
 
 // parseServerForm converts the form into a server, recording field errors
@@ -392,9 +406,10 @@ func splitTags(raw string) []string {
 	return tags
 }
 
-// saveServerCmd validates and persists a server off the UI goroutine. It
-// refuses read-only sessions and additions beyond d.MaxServers.
-func saveServerCmd(d *ui.Deps, srv store.Server, edited bool) tea.Cmd {
+// saveServerCmd validates and persists a server off the UI goroutine for
+// the form numbered seq. It refuses read-only sessions and additions
+// beyond d.MaxServers.
+func saveServerCmd(d *ui.Deps, srv store.Server, edited bool, seq int) tea.Cmd {
 	var st *store.Store
 	limit := 0
 	if d != nil {
@@ -402,24 +417,31 @@ func saveServerCmd(d *ui.Deps, srv store.Server, edited bool) tea.Cmd {
 	}
 	readOnly := isReadOnly(d)
 	return func() tea.Msg {
-		switch {
-		case readOnly:
-			return serverSavedMsg{srv: srv, edited: edited, err: errReadOnly}
-		case st == nil:
-			return serverSavedMsg{srv: srv, edited: edited, err: errNoStore}
-		}
-		if err := srv.Validate(); err != nil {
-			return serverSavedMsg{srv: srv, edited: edited, err: err}
-		}
-		if edited {
-			return serverSavedMsg{srv: srv, edited: true, err: st.Update(srv)}
-		}
-		if limit > 0 && len(st.Servers()) >= limit {
-			return serverSavedMsg{srv: srv, err: serverLimitError(limit)}
-		}
-		stored, err := st.Add(srv)
-		return serverSavedMsg{srv: stored, err: err}
+		msg := saveServer(st, srv, edited, limit, readOnly)
+		msg.seq = seq
+		return msg
 	}
+}
+
+// saveServer performs the store write of saveServerCmd.
+func saveServer(st *store.Store, srv store.Server, edited bool, limit int, readOnly bool) serverSavedMsg {
+	switch {
+	case readOnly:
+		return serverSavedMsg{srv: srv, edited: edited, err: errReadOnly}
+	case st == nil:
+		return serverSavedMsg{srv: srv, edited: edited, err: errNoStore}
+	}
+	if err := srv.Validate(); err != nil {
+		return serverSavedMsg{srv: srv, edited: edited, err: err}
+	}
+	if edited {
+		return serverSavedMsg{srv: srv, edited: true, err: st.Update(srv)}
+	}
+	if limit > 0 && len(st.Servers()) >= limit {
+		return serverSavedMsg{srv: srv, err: serverLimitError(limit)}
+	}
+	stored, err := st.Add(srv)
+	return serverSavedMsg{srv: stored, err: err}
 }
 
 // deleteServerCmd removes a server off the UI goroutine.
@@ -440,18 +462,25 @@ func deleteServerCmd(d *ui.Deps, id, name string) tea.Cmd {
 	}
 }
 
-// saved handles the result of saveServerCmd.
+// saved handles the result of saveServerCmd. Results of a form that was
+// closed while saving only produce a toast (and a refresh on success); they
+// never touch a form opened since.
 func (s *servers) saved(msg serverSavedMsg) tea.Cmd {
+	current := s.form != nil && s.form.seq == msg.seq
 	if msg.err != nil {
-		if s.form != nil {
+		if current {
 			s.form.busy = false
 			s.showSaveError(msg.err)
 			return nil
 		}
 		return ui.Toast(theme.ToneBad, "Save failed: "+clean(msg.err.Error()))
 	}
-	s.form = nil
-	s.selected = msg.srv.ID
+	if current {
+		s.form = nil
+	}
+	if s.form == nil {
+		s.selected = msg.srv.ID
+	}
 	verb := "Added "
 	if msg.edited {
 		verb = "Updated "
