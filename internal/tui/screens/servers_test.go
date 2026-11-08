@@ -418,3 +418,11 @@ func TestServersMaxServers(t *testing.T) {
 		t.Fatalf("update at the limit: %v", msg.err)
 	}
 }
+
+func TestServerFormPrefillsDefaultPort(t *testing.T) {
+	s := newTestServers(t)
+	send(s, "a")
+	if got := s.form.Value(fieldPort); got != "22" {
+		t.Fatalf("new form port = %q, want a real 22, not a placeholder", got)
+	}
+}
