@@ -25,7 +25,7 @@ func (p placeholder) Capturing() bool                     { return false }
 func (p placeholder) Commands() []ui.Command              { return nil }
 
 // NewOverview lists all servers as a table or tiles.
-func NewOverview(d *ui.Deps) ui.Screen { return placeholder{ui.TabOverview, "Overview", "◉"} }
+func NewOverview(d *ui.Deps) ui.Screen { return newOverview(d) }
 
 // NewServers manages the inventory (add, edit, delete).
 func NewServers(d *ui.Deps) ui.Screen { return placeholder{ui.TabServers, "Servers", "≡"} }
