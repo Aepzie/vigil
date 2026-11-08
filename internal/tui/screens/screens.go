@@ -31,7 +31,7 @@ func NewOverview(d *ui.Deps) ui.Screen { return newOverview(d) }
 func NewServers(d *ui.Deps) ui.Screen { return newServers(d) }
 
 // NewDetail shows one server in depth.
-func NewDetail(d *ui.Deps) ui.Screen { return placeholder{ui.TabDetail, "Detail", "◈"} }
+func NewDetail(d *ui.Deps) ui.Screen { return newDetail(d) }
 
 // NewAlerts lists active and resolved alerts.
 func NewAlerts(d *ui.Deps) ui.Screen { return placeholder{ui.TabAlerts, "Alerts", "⚡"} }
