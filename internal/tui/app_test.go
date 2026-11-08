@@ -2,6 +2,7 @@ package tui
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 
 	"github.com/Aepzie/vigil/internal/alerts"
 	"github.com/Aepzie/vigil/internal/compat"
+	"github.com/Aepzie/vigil/internal/metrics"
 	"github.com/Aepzie/vigil/internal/store"
 	"github.com/Aepzie/vigil/internal/theme"
 	"github.com/Aepzie/vigil/internal/tui/ui"
@@ -218,6 +220,28 @@ func TestOpenShell(t *testing.T) {
 	f.send(ui.OpenShellMsg{ServerID: "a"})
 	if opened.Name != "web-01" {
 		t.Fatalf("shell opened for %+v", opened)
+	}
+}
+
+func TestOpenShellRefusesOfflineServer(t *testing.T) {
+	f := newFixture(t, Options{SkipSplash: true})
+	f.send(ui.FleetMsg{Fleet: ui.Fleet{
+		Now:     time.Unix(100, 0),
+		Servers: []store.Server{{ID: "a", Name: "web-01"}},
+		Snaps:   map[string]metrics.Snapshot{"a": {ServerID: "a", State: metrics.StateOffline, Err: "connection\x1b[31m refused"}},
+	}})
+	called := false
+	f.m.deps.Shell = func(store.Server) tea.ExecCommand {
+		called = true
+		return nil
+	}
+	f.send(ui.OpenShellMsg{ServerID: "a"})
+	if called {
+		t.Fatal("shell must not be opened for an offline server")
+	}
+	last := f.m.toasts.items[len(f.m.toasts.items)-1]
+	if last.tone != theme.ToneWarn || !strings.Contains(last.text, "web-01 is offline (connection refused)") {
+		t.Fatalf("toast = %+v", last)
 	}
 }
 
