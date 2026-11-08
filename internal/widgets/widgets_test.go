@@ -505,6 +505,76 @@ func TestColumnWidths(t *testing.T) {
 	}
 }
 
+func TestColumnWidthsMax(t *testing.T) {
+	tests := []struct {
+		name  string
+		cols  []Column
+		total int
+		want  []int
+	}{
+		{
+			"below the cap grows as before",
+			[]Column{{Title: "A", Min: 4, Max: 20}, {Title: "B", Min: 4}},
+			20, []int{9, 9},
+		},
+		{
+			"capped column hands space to the others",
+			[]Column{{Title: "A", Min: 4, Max: 10}, {Title: "B", Min: 4, Flex: 1}, {Title: "C", Width: 3}},
+			50, []int{10, 33, 3},
+		},
+		{
+			"caps cascade",
+			[]Column{{Title: "A", Min: 4, Max: 6}, {Title: "B", Min: 4, Max: 12}, {Title: "C", Min: 4, Flex: 2}},
+			60, []int{6, 12, 38},
+		},
+		{
+			"every flexible column capped pads at the right",
+			[]Column{{Title: "A", Min: 4, Max: 8}, {Title: "B", Width: 5}, {Title: "C", Min: 4, Max: 10}},
+			60, []int{8, 5, 10},
+		},
+		{
+			"min above max keeps min",
+			[]Column{{Title: "A", Min: 9, Max: 5}, {Title: "B", Min: 2}},
+			30, []int{9, 19},
+		},
+		{
+			"weighted shares below every cap",
+			[]Column{{Title: "N", Min: 10, Max: 24}, {Title: "H", Min: 12, Max: 28}, {Title: "S", Min: 10, Flex: 4, Max: 60}, {Title: "T", Min: 10, Flex: 4, Max: 60}},
+			160, []int{22, 24, 54, 54},
+		},
+		{
+			"heavy columns saturate first, light ones follow",
+			[]Column{{Title: "N", Min: 10, Max: 24}, {Title: "H", Min: 12, Max: 28}, {Title: "S", Min: 10, Flex: 4, Max: 60}, {Title: "T", Min: 10, Flex: 4, Max: 60}},
+			180, []int{24, 28, 60, 60},
+		},
+	}
+	for _, tc := range tests {
+		got := ColumnWidths(tc.cols, tc.total)
+		if fmt.Sprint(got) != fmt.Sprint(tc.want) {
+			t.Errorf("%s: ColumnWidths(%d) = %v, want %v", tc.name, tc.total, got, tc.want)
+		}
+		for i, c := range tc.cols {
+			if c.Max > 0 && got[i] > max(c.Max, c.Min) {
+				t.Errorf("%s: column %d width %d exceeds Max %d", tc.name, i, got[i], c.Max)
+			}
+		}
+	}
+}
+
+func TestTableCappedColumnsPadRight(t *testing.T) {
+	th := theme.Default()
+	cols := []Column{{Title: "NAME", Min: 4, Max: 6}, {Title: "V", Width: 3}}
+	out := Table(th, TableOpts{Width: 30, Height: 3, Columns: cols, Rows: [][]string{{"alpha", "1"}}, Selected: 0})
+	assertBlock(t, "Table capped", out, 30, 3)
+	lines := strings.Split(ansi.Strip(out), "\n")
+	if want := "NAME    V" + strings.Repeat(" ", 21); lines[0] != want {
+		t.Errorf("header = %q, want %q", lines[0], want)
+	}
+	if want := "alpha   1" + strings.Repeat(" ", 21); lines[1] != want {
+		t.Errorf("row = %q, want %q", lines[1], want)
+	}
+}
+
 func TestScrollOffset(t *testing.T) {
 	tests := []struct {
 		n, visible, selected, offset, want int
