@@ -2,11 +2,13 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/CraguS/vigil/internal/compat"
+	"github.com/CraguS/vigil/internal/svgshot"
 	"github.com/CraguS/vigil/internal/theme"
 	"github.com/CraguS/vigil/internal/tui"
 	"github.com/CraguS/vigil/internal/tui/ui"
@@ -28,11 +30,13 @@ var tabNames = map[string]ui.TabID{
 }
 
 func cmdRender(args []string, std stdio) error {
-	fs := newFlagSet("render", "render [--size WxH] [--tab NAME] [--compat MODE] [--seed N]", std)
+	fs := newFlagSet("render", "render [--size WxH] [--tab NAME] [--compat MODE] [--seed N] [--format ansi|svg] [--out FILE]", std)
 	size := fs.String("size", "150x44", "frame size in cells, WIDTHxHEIGHT")
 	tab := fs.String("tab", "overview", "tab to render: overview, servers, detail, alerts, settings")
 	mode := fs.String("compat", "auto", "glyph compatibility: auto, blocks, ascii, off")
 	seed := fs.Int64("seed", 1, "random seed of the demo data")
+	format := fs.String("format", "ansi", "output format: ansi (escape sequences) or svg (terminal screenshot)")
+	out := fs.String("out", "", "write to FILE instead of stdout")
 	rest, err := parseFlags(fs, args)
 	if err != nil {
 		return handleParseErr(err)
@@ -44,13 +48,18 @@ func cmdRender(args []string, std stdio) error {
 	if err != nil {
 		return err
 	}
-	tabID, ok := tabNames[strings.ToLower(*tab)]
+	tabName := strings.ToLower(*tab)
+	tabID, ok := tabNames[tabName]
 	if !ok {
 		return fmt.Errorf("unknown tab %q (want overview, servers, detail, alerts or settings)", *tab)
 	}
 	compatMode, err := parseCompat(*mode)
 	if err != nil {
 		return err
+	}
+	outFormat := strings.ToLower(*format)
+	if outFormat != "ansi" && outFormat != "svg" {
+		return fmt.Errorf("unknown format %q (want ansi or svg)", *format)
 	}
 
 	fleet, err := newDemoFleet(*seed)
@@ -70,7 +79,17 @@ func cmdRender(args []string, std stdio) error {
 		},
 		SkipSplash: true,
 	}, width, height, tabID)
-	_, err = fmt.Fprint(std.out, frame, theme.Reset, "\n")
+	output := []byte(frame + theme.Reset + "\n")
+	if outFormat == "svg" {
+		output, err = svgshot.Render(frame, svgshot.Options{Title: "vigil — " + tabName})
+		if err != nil {
+			return err
+		}
+	}
+	if *out != "" {
+		return os.WriteFile(*out, output, 0o644)
+	}
+	_, err = std.out.Write(output)
 	return err
 }
 
