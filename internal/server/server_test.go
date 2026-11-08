@@ -178,6 +178,20 @@ func (b *syncBuffer) Len() int {
 	return b.buf.Len()
 }
 
+func TestIdleSessionIsClosed(t *testing.T) {
+	ts := startServer(t, func(c *Config) { c.IdleTimeout = 2 * time.Second })
+	c := ts.login(t)
+	sess, stdout, _ := openTUI(t, c)
+	waitFor(t, "dashboard output", func() bool { return stdout.Len() > 0 })
+	done := make(chan error, 1)
+	go func() { done <- sess.Wait() }()
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		t.Fatal("idle session was not closed")
+	}
+}
+
 func TestHostKeyIsPrivate(t *testing.T) {
 	ts := startServer(t, nil)
 	_ = ts.login(t)

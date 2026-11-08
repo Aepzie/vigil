@@ -258,6 +258,53 @@ func TestResizeAfterShellEnds(t *testing.T) {
 	}
 }
 
+func TestWatchIdle(t *testing.T) {
+	const timeout = 600 * time.Millisecond
+	s := newSession(80, 24, io.Discard)
+	src, feed := io.Pipe()
+	go s.readInput(src)
+	go func() { _, _ = io.Copy(io.Discard, s.in.program()) }()
+
+	fired := make(chan time.Time, 1)
+	start := time.Now()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go s.watchIdle(ctx, timeout, func() { fired <- time.Now() })
+
+	// Keep typing for a while; the watchdog must not fire meanwhile.
+	for range 24 {
+		time.Sleep(50 * time.Millisecond)
+		_, _ = feed.Write([]byte("j"))
+	}
+	typedUntil := time.Now()
+	select {
+	case at := <-fired:
+		if at.Before(typedUntil) {
+			t.Fatalf("fired after %v despite input", at.Sub(start))
+		}
+		if at.Sub(typedUntil) < timeout-50*time.Millisecond {
+			t.Fatalf("fired %v after the last input, want >= %v", at.Sub(typedUntil), timeout)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("idle watchdog never fired")
+	}
+	_ = feed.Close()
+}
+
+func TestWatchIdleDisabled(t *testing.T) {
+	s := newSession(80, 24, io.Discard)
+	done := make(chan struct{})
+	go func() {
+		s.watchIdle(context.Background(), 0, func() { t.Error("fired with timeout 0") })
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("watchIdle with timeout 0 did not return")
+	}
+}
+
 func waitFor(t *testing.T, what string, cond func() bool) {
 	t.Helper()
 	deadline := time.Now().Add(10 * time.Second)

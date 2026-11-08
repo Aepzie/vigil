@@ -19,6 +19,7 @@ import (
 	"runtime/debug"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -67,7 +68,10 @@ type Config struct {
 	// start), users.json and authorized_keys.
 	DataDir string
 	Version string
-	// IdleTimeout disconnects idle sessions; 0 disables.
+	// IdleTimeout disconnects sessions whose client sent no input or
+	// window change for this long (output does not count, the dashboard
+	// redraws continuously), and connections without any traffic; 0
+	// disables.
 	IdleTimeout time.Duration
 	// MaxTimeout is the absolute connection lifetime; 0 disables.
 	MaxTimeout time.Duration
@@ -286,7 +290,7 @@ func (s *server) serveTUI(sess ssh.Session) {
 	defer stopOnShutdown()
 
 	st := newSession(pty.Window.Width, pty.Window.Height, rawOutput(sess))
-	go st.in.pump(sess)
+	go st.readInput(sess)
 	context.AfterFunc(ctx, st.in.close)
 
 	environ := append(sess.Environ(), "TERM="+pty.Term)
@@ -312,6 +316,14 @@ func (s *server) serveTUI(sess ssh.Session) {
 		defer s.recoverSession(cancel)
 		st.forwardSizes(ctx, p.Send)
 	})
+	var idle atomic.Bool
+	wg.Go(func() {
+		defer s.recoverSession(cancel)
+		st.watchIdle(ctx, s.cfg.IdleTimeout, func() {
+			idle.Store(true)
+			cancel()
+		})
+	})
 
 	_, err := p.Run()
 	p.Kill()
@@ -320,8 +332,12 @@ func (s *server) serveTUI(sess ssh.Session) {
 	if err != nil && !errors.Is(err, tea.ErrProgramKilled) && !errors.Is(err, context.Canceled) {
 		s.log.Error("session ended with error", "user", sess.User(), "err", err)
 	}
-	if s.ctx.Err() != nil {
+	switch {
+	case s.ctx.Err() != nil:
 		wish.Println(sess, "\nvigil is shutting down. Please reconnect in a moment.")
+	case idle.Load():
+		s.log.Info("idle session closed", "user", sess.User(), "remote-addr", sess.RemoteAddr().String())
+		wish.Printf(sess, "\nvigil: disconnected after %s without input.\n", s.cfg.IdleTimeout)
 	}
 }
 

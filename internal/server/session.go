@@ -5,6 +5,8 @@ import (
 	"io"
 	"reflect"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/ssh"
@@ -35,15 +37,65 @@ type session struct {
 	// resized holds a pending notification for forwardSizes; it has a
 	// capacity of one so bursts of window changes coalesce.
 	resized chan struct{}
+
+	// lastActive is the time of the last client input or window change
+	// in Unix nanoseconds.
+	lastActive atomic.Int64
 }
 
 func newSession(width, height int, out io.Writer) *session {
-	return &session{
+	s := &session{
 		in:      newInputMux(),
 		out:     out,
 		width:   width,
 		height:  height,
 		resized: make(chan struct{}, 1),
+	}
+	s.touch()
+	return s
+}
+
+// touch records client activity.
+func (s *session) touch() { s.lastActive.Store(time.Now().UnixNano()) }
+
+// idleFor returns how long the client has been inactive at now.
+func (s *session) idleFor(now time.Time) time.Duration {
+	return now.Sub(time.Unix(0, s.lastActive.Load()))
+}
+
+// readInput pumps r into the input mux, recording activity.
+func (s *session) readInput(r io.Reader) {
+	s.in.pump(readerFunc(func(p []byte) (int, error) {
+		n, err := r.Read(p)
+		if n > 0 {
+			s.touch()
+		}
+		return n, err
+	}))
+}
+
+// watchIdle calls onIdle once the client sent neither input nor window
+// changes for timeout. Output does not count: the dashboard redraws
+// constantly, which is why the SSH server's own idle timeout (reset by
+// any traffic) cannot detect an abandoned session.
+func (s *session) watchIdle(ctx context.Context, timeout time.Duration, onIdle func()) {
+	if timeout <= 0 {
+		return
+	}
+	t := time.NewTimer(timeout)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case now := <-t.C:
+			idle := s.idleFor(now)
+			if idle >= timeout {
+				onIdle()
+				return
+			}
+			t.Reset(timeout - idle)
+		}
 	}
 }
 
@@ -61,6 +113,7 @@ func (s *session) resize(width, height int) {
 	if width <= 0 || height <= 0 {
 		return
 	}
+	s.touch()
 	s.mu.Lock()
 	s.width, s.height = width, height
 	shell := s.shell
