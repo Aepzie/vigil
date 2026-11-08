@@ -30,6 +30,7 @@ import (
 	"charm.land/wish/v2/ratelimiter"
 	wishrecover "charm.land/wish/v2/recover"
 	"github.com/charmbracelet/colorprofile"
+	gossh "golang.org/x/crypto/ssh"
 
 	"github.com/CraguS/vigil/internal/alerts"
 	"github.com/CraguS/vigil/internal/auth"
@@ -74,6 +75,10 @@ type Config struct {
 	MaxSessions int
 	// Logger receives connection and error logs; nil logs to stderr.
 	Logger *log.Logger
+	// Public lets anyone log in without credentials. It exists for
+	// `vigil demo --serve --public` and is refused unless Deps.Dialer is
+	// nil, so no remote shell can be reached through a public server.
+	Public bool
 }
 
 // Deps are the long-lived services shared by all sessions.
@@ -115,8 +120,14 @@ func Run(ctx context.Context, cfg Config, d Deps) error {
 // Serve is like Run but accepts connections on ln, which it closes.
 func Serve(ctx context.Context, ln net.Listener, cfg Config, d Deps) error {
 	defer ln.Close()
-	if d.Auth == nil || d.Store == nil || d.Alerts == nil {
-		return errors.New("server: Auth, Store and Alerts are required")
+	if d.Store == nil || d.Alerts == nil {
+		return errors.New("server: Store and Alerts are required")
+	}
+	if cfg.Public && d.Dialer != nil {
+		return errors.New("server: a public server must not have a Dialer")
+	}
+	if !cfg.Public && d.Auth == nil {
+		return errors.New("server: Auth is required")
 	}
 	if d.Hub == nil && d.Source == nil {
 		return errors.New("server: Hub or Source is required")
@@ -203,10 +214,18 @@ type server struct {
 }
 
 func (s *server) build() (*ssh.Server, error) {
-	srv, err := wish.NewServer(
-		wish.WithHostKeyPath(filepath.Join(s.cfg.DataDir, HostKeyFile)),
+	authOpts := []ssh.Option{
 		wish.WithPasswordAuth(s.checkPassword),
 		wish.WithPublicKeyAuth(s.checkKey),
+	}
+	if s.cfg.Public {
+		authOpts = []ssh.Option{
+			wish.WithPublicKeyAuth(func(ssh.Context, ssh.PublicKey) bool { return true }),
+			wish.WithKeyboardInteractiveAuth(func(ssh.Context, gossh.KeyboardInteractiveChallenge) bool { return true }),
+		}
+	}
+	srv, err := wish.NewServer(append(authOpts,
+		wish.WithHostKeyPath(filepath.Join(s.cfg.DataDir, HostKeyFile)),
 		wish.WithIdleTimeout(s.cfg.IdleTimeout),
 		wish.WithMaxTimeout(s.cfg.MaxTimeout),
 		wish.WithMiddleware(
@@ -219,7 +238,7 @@ func (s *server) build() (*ssh.Server, error) {
 				s.trackSessions(),
 			),
 		),
-	)
+	)...)
 	if err != nil {
 		return nil, fmt.Errorf("ssh server: %w", err)
 	}

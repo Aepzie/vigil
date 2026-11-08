@@ -24,6 +24,7 @@ import (
 	"github.com/CraguS/vigil/internal/alerts"
 	"github.com/CraguS/vigil/internal/auth"
 	"github.com/CraguS/vigil/internal/collector"
+	"github.com/CraguS/vigil/internal/demo"
 	"github.com/CraguS/vigil/internal/sshclient"
 	"github.com/CraguS/vigil/internal/store"
 )
@@ -346,6 +347,54 @@ func TestRawOutput(t *testing.T) {
 	if got, want := string(out), "raw\nline|cooked\r\nline"; got != want {
 		t.Fatalf("output = %q, want %q", got, want)
 	}
+}
+
+func TestPublicMode(t *testing.T) {
+	dir := t.TempDir()
+	st, err := store.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dialer, err := sshclient.NewDialer(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := Config{DataDir: dir, Public: true, Logger: log.New(io.Discard)}
+	deps := Deps{Store: st, Alerts: alerts.NewEngine(alerts.Thresholds{}), Source: demo.New(st, nil, 1), Dialer: dialer}
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Serve(context.Background(), ln, cfg, deps); err == nil {
+		t.Fatal("public server with a Dialer was accepted")
+	}
+
+	deps.Dialer = nil
+	ln, err = net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- Serve(ctx, ln, cfg, deps) }()
+	defer func() {
+		cancel()
+		<-done
+	}()
+	noQuestions := gossh.KeyboardInteractive(func(string, string, []string, []bool) ([]string, error) { return nil, nil })
+	c, err := gossh.Dial("tcp", ln.Addr().String(), &gossh.ClientConfig{
+		User:            "guest",
+		Auth:            []gossh.AuthMethod{noQuestions},
+		HostKeyCallback: gossh.InsecureIgnoreHostKey(),
+		Timeout:         10 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("public login failed: %v", err)
+	}
+	defer c.Close()
+	_, stdout, _ := openTUI(t, c)
+	waitFor(t, "dashboard output", func() bool { return stdout.Len() > 0 })
 }
 
 func testHostKeyPEM(t *testing.T) []byte {
