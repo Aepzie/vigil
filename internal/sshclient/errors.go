@@ -107,7 +107,11 @@ func classify(err error) error {
 		return ErrUnreachable
 	case strings.Contains(err.Error(), "unable to authenticate"):
 		return ErrAuthFailed
-	case errors.Is(err, io.EOF), errors.Is(err, io.ErrUnexpectedEOF), isErrno(err, resetErrnos):
+	// When the server hangs up mid-handshake, x/crypto/ssh closes the
+	// connection itself and may report its own read on the closed socket
+	// (net.ErrClosed) instead of EOF. Dial handles context cancellation,
+	// which also closes the socket, before classifying.
+	case errors.Is(err, io.EOF), errors.Is(err, io.ErrUnexpectedEOF), errors.Is(err, net.ErrClosed), isErrno(err, resetErrnos):
 		return ErrClosed
 	default:
 		return nil

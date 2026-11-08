@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -349,6 +350,18 @@ func TestReason(t *testing.T) {
 	for _, tt := range tests {
 		if got := Reason(tt.err); got != tt.want {
 			t.Errorf("Reason(%v) = %q, want %q", tt.err, got, tt.want)
+		}
+	}
+}
+
+func TestClassifyHandshakeHangup(t *testing.T) {
+	tests := []error{
+		io.EOF,
+		fmt.Errorf("ssh: handshake failed: %w", &net.OpError{Op: "read", Net: "tcp", Err: net.ErrClosed}),
+	}
+	for _, err := range tests {
+		if got := classify(err); got != ErrClosed {
+			t.Errorf("classify(%v) = %v, want %v", err, got, ErrClosed)
 		}
 	}
 }
