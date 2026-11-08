@@ -1,9 +1,12 @@
 package server
 
 import (
+	"container/list"
 	"context"
+	"errors"
 	"math/rand/v2"
 	"net"
+	"net/netip"
 	"sync"
 	"time"
 
@@ -117,6 +120,17 @@ const (
 	failureLimit   = 10
 	failureWindow  = 5 * time.Minute
 	maxTrackedIPs  = 4096
+	// globalFailureLimit failures from all clients together within
+	// globalFailureWindow suspend password logins for everyone until the
+	// window ends, which caps a distributed guessing attack.
+	globalFailureLimit  = 200
+	globalFailureWindow = time.Minute
+)
+
+// Reasons a password attempt is rejected without being checked.
+var (
+	errClientFailures = errors.New("too many failures from this client")
+	errGlobalFailures = errors.New("too many failures from all clients")
 )
 
 // penalize delays a failed password attempt by a jittered amount, or until
@@ -131,74 +145,140 @@ func penalize(ctx context.Context) {
 	}
 }
 
-// failureLimiter counts failed password attempts per client IP in fixed
-// windows. Once an IP reaches the limit, its password attempts are
-// rejected without checking until the window ends. Public key logins are
-// not affected.
+// failureLimiter counts failed password attempts per client (see
+// clientKey) in fixed windows. Once a client reaches the limit, its
+// password attempts are rejected without checking until the window ends.
+// On top of that, a global budget counts failures from all clients: once
+// it is exhausted, password attempts from everyone are rejected until the
+// global window ends. Public key logins are not affected.
+//
+// At most maxEntries clients are tracked; when full, expired entries are
+// dropped first and then the least recently seen ones, so a flood of new
+// addresses cannot wipe the counters of active clients.
 type failureLimiter struct {
-	mu      sync.Mutex
-	limit   int
-	window  time.Duration
-	now     func() time.Time
-	entries map[string]failureEntry
+	mu           sync.Mutex
+	limit        int
+	window       time.Duration
+	maxEntries   int
+	globalLimit  int
+	globalWindow time.Duration
+	now          func() time.Time
+
+	entries map[string]*list.Element
+	// recent orders entries by last use, most recent first.
+	recent      *list.List
+	globalCount int
+	globalStart time.Time
 }
 
 type failureEntry struct {
+	key   string
 	count int
 	start time.Time
 }
 
 func newFailureLimiter(limit int, window time.Duration) *failureLimiter {
 	return &failureLimiter{
-		limit:   limit,
-		window:  window,
-		now:     time.Now,
-		entries: make(map[string]failureEntry),
+		limit:        limit,
+		window:       window,
+		maxEntries:   maxTrackedIPs,
+		globalLimit:  globalFailureLimit,
+		globalWindow: globalFailureWindow,
+		now:          time.Now,
+		entries:      make(map[string]*list.Element),
+		recent:       list.New(),
 	}
 }
 
-// blocked reports whether ip exhausted its failures in the current window.
-func (l *failureLimiter) blocked(ip string) bool {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	e, ok := l.entries[ip]
-	if !ok {
-		return false
-	}
-	if l.now().Sub(e.start) >= l.window {
-		delete(l.entries, ip)
-		return false
-	}
-	return e.count >= l.limit
-}
-
-// fail records a failed attempt from ip.
-func (l *failureLimiter) fail(ip string) {
+// blocked returns a non-nil reason when password attempts from the
+// client key must be rejected now.
+func (l *failureLimiter) blocked(key string) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	now := l.now()
-	e, ok := l.entries[ip]
-	if !ok || now.Sub(e.start) >= l.window {
-		if len(l.entries) >= maxTrackedIPs {
-			l.pruneLocked(now)
-		}
-		e = failureEntry{start: now}
+	if now.Sub(l.globalStart) < l.globalWindow && l.globalCount >= l.globalLimit {
+		return errGlobalFailures
 	}
-	e.count++
-	l.entries[ip] = e
+	el, ok := l.entries[key]
+	if !ok {
+		return nil
+	}
+	e := el.Value.(*failureEntry)
+	if now.Sub(e.start) >= l.window {
+		l.removeLocked(el)
+		return nil
+	}
+	l.recent.MoveToFront(el)
+	if e.count >= l.limit {
+		return errClientFailures
+	}
+	return nil
 }
 
-// pruneLocked drops expired entries, and if that is not enough, all of
-// them, so memory stays bounded under a distributed attack.
-func (l *failureLimiter) pruneLocked(now time.Time) {
-	for ip, e := range l.entries {
+// fail records a failed attempt from the client key.
+func (l *failureLimiter) fail(key string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	now := l.now()
+	if now.Sub(l.globalStart) >= l.globalWindow {
+		l.globalStart, l.globalCount = now, 0
+	}
+	l.globalCount++
+
+	if el, ok := l.entries[key]; ok {
+		e := el.Value.(*failureEntry)
 		if now.Sub(e.start) >= l.window {
-			delete(l.entries, ip)
+			e.count, e.start = 0, now
 		}
+		e.count++
+		l.recent.MoveToFront(el)
+		return
 	}
-	if len(l.entries) >= maxTrackedIPs {
-		clear(l.entries)
+	if len(l.entries) >= l.maxEntries {
+		l.evictLocked(now)
 	}
+	l.entries[key] = l.recent.PushFront(&failureEntry{key: key, count: 1, start: now})
+}
+
+// evictLocked makes room for one entry: it drops every expired entry and,
+// if none expired, the least recently used one.
+func (l *failureLimiter) evictLocked(now time.Time) {
+	for el := l.recent.Back(); el != nil; {
+		prev := el.Prev()
+		if now.Sub(el.Value.(*failureEntry).start) >= l.window {
+			l.removeLocked(el)
+		}
+		el = prev
+	}
+	for len(l.entries) >= l.maxEntries {
+		l.removeLocked(l.recent.Back())
+	}
+}
+
+func (l *failureLimiter) removeLocked(el *list.Element) {
+	delete(l.entries, el.Value.(*failureEntry).key)
+	l.recent.Remove(el)
+}
+
+// clientKey identifies the client behind addr for rate limiting: an IPv4
+// address as is, an IPv6 address by its /64 prefix (one subscriber
+// usually controls a whole /64, so per-address counting would give them
+// unlimited attempts). Other addresses are used verbatim.
+func clientKey(addr net.Addr) string {
+	host := remoteIP(addr)
+	ip, err := netip.ParseAddr(host)
+	if err != nil {
+		return host
+	}
+	ip = ip.Unmap().WithZone("")
+	if ip.Is4() {
+		return ip.String()
+	}
+	prefix, err := ip.Prefix(64)
+	if err != nil {
+		return host
+	}
+	return prefix.String()
 }
 
 // remoteIP returns the IP of addr without the port.

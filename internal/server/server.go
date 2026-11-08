@@ -251,15 +251,16 @@ func (s *server) build() (*ssh.Server, error) {
 
 func (s *server) checkPassword(ctx ssh.Context, password string) bool {
 	ip := remoteIP(ctx.RemoteAddr())
-	if s.failures.blocked(ip) {
-		s.log.Warn("password attempt rejected: too many failures", "user", ctx.User(), "remote-addr", ip)
+	key := clientKey(ctx.RemoteAddr())
+	if err := s.failures.blocked(key); err != nil {
+		s.log.Warn("password attempt rejected: "+err.Error(), "user", ctx.User(), "remote-addr", ip)
 		penalize(ctx)
 		return false
 	}
 	if s.deps.Auth.CheckPassword(ctx.User(), password) {
 		return true
 	}
-	s.failures.fail(ip)
+	s.failures.fail(key)
 	s.log.Warn("password authentication failed", "user", ctx.User(), "remote-addr", ip)
 	penalize(ctx)
 	return false
