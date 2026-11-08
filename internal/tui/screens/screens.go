@@ -28,7 +28,7 @@ func (p placeholder) Commands() []ui.Command              { return nil }
 func NewOverview(d *ui.Deps) ui.Screen { return newOverview(d) }
 
 // NewServers manages the inventory (add, edit, delete).
-func NewServers(d *ui.Deps) ui.Screen { return placeholder{ui.TabServers, "Servers", "≡"} }
+func NewServers(d *ui.Deps) ui.Screen { return newServers(d) }
 
 // NewDetail shows one server in depth.
 func NewDetail(d *ui.Deps) ui.Screen { return placeholder{ui.TabDetail, "Detail", "◈"} }
