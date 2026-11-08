@@ -255,3 +255,53 @@ func TestTextInputSanitizes(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+func TestMaskedInputNeverRendersText(t *testing.T) {
+	th := theme.Default()
+	const secret = "hunter2 é日"
+	tests := []struct {
+		name    string
+		width   int
+		focused bool
+		cursor  int
+	}{
+		{"focused wide", 40, true, -1},
+		{"blurred wide", 40, false, -1},
+		{"focused narrow scrolls", 4, true, -1},
+		{"cursor inside", 20, true, 3},
+		{"single cell", 1, true, -1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			in := newMaskedInput("password")
+			in.Insert(secret)
+			if tt.cursor >= 0 {
+				in.cursor = tt.cursor
+			}
+			out := ansi.Strip(in.View(th, tt.width, tt.focused))
+			if got := ansi.StringWidth(out); got != tt.width {
+				t.Fatalf("width %d, want %d", got, tt.width)
+			}
+			for _, r := range strings.ReplaceAll(secret, " ", "") {
+				if strings.ContainsRune(out, r) {
+					t.Fatalf("view %q reveals %q", out, r)
+				}
+			}
+			if tt.width >= 20 && strings.Count(out, string(maskRune)) != len([]rune(secret)) {
+				t.Fatalf("view %q: want one mask per rune", out)
+			}
+		})
+	}
+}
+
+func TestMaskedInputPasteAndClear(t *testing.T) {
+	in := newMaskedInput("")
+	in.Insert(" s3cret pass \r\n")
+	if got := in.Value(); got != " s3cret pass " {
+		t.Fatalf("value %q, want the pasted text without the line break", got)
+	}
+	in.Clear()
+	if in.Value() != "" || in.cursor != 0 {
+		t.Fatalf("Clear left %q at %d", in.Value(), in.cursor)
+	}
+}
