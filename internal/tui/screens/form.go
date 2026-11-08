@@ -19,7 +19,15 @@ type formField struct {
 	help  string
 	input textInput
 	err   string
+	// hidden fields are neither shown nor focused.
+	hidden bool
+	// disabled, when non-empty, is shown in place of the input; the
+	// field cannot be focused or edited.
+	disabled string
 }
+
+// focusable reports whether the field can receive focus.
+func (fl formField) focusable() bool { return !fl.hidden && fl.disabled == "" }
 
 // formAction is what a key press asks the form owner to do.
 type formAction int
@@ -40,6 +48,8 @@ type form struct {
 	// err is a form-wide error, e.g. from the store.
 	err  string
 	busy bool
+	// keys replaces the default key help in the footer when non-empty.
+	keys string
 }
 
 // maxFormWidth caps the modal width so labels and inputs stay close.
@@ -57,14 +67,14 @@ func (f *form) Update(msg tea.KeyPressMsg) formAction {
 	case "ctrl+s":
 		return formSubmit
 	case "tab", "down", "ctrl+n":
-		f.focus = (f.focus + 1) % n
+		f.focus = f.next(1)
 	case "shift+tab", "up", "ctrl+p":
-		f.focus = (f.focus - 1 + n) % n
+		f.focus = f.next(-1)
 	case "enter":
-		if f.focus == n-1 {
+		if f.next(1) <= f.focus {
 			return formSubmit
 		}
-		f.focus++
+		f.focus = f.next(1)
 	default:
 		if f.fields[f.focus].input.Update(msg) {
 			f.fields[f.focus].err = ""
@@ -72,6 +82,31 @@ func (f *form) Update(msg tea.KeyPressMsg) formAction {
 		}
 	}
 	return formNone
+}
+
+// next returns the index of the next focusable field in direction
+// delta (1 or -1), wrapping around, or the focused index if there is
+// none.
+func (f *form) next(delta int) int {
+	n := len(f.fields)
+	for step := 1; step < n; step++ {
+		i := ((f.focus+delta*step)%n + n) % n
+		if f.fields[i].focusable() {
+			return i
+		}
+	}
+	return f.focus
+}
+
+// visibleFields is the number of fields that are not hidden.
+func (f *form) visibleFields() int {
+	n := 0
+	for _, fl := range f.fields {
+		if !fl.hidden {
+			n++
+		}
+	}
+	return n
 }
 
 // Paste inserts pasted text into the focused field.
@@ -114,7 +149,7 @@ func (f *form) errorCount() int {
 
 // Size returns the modal panel size for a w×h area.
 func (f *form) Size(w, h int) (int, int) {
-	n := len(f.fields)
+	n := f.visibleFields()
 	pw := min(w, maxFormWidth)
 	switch {
 	case h >= 2*n+4:
@@ -130,7 +165,9 @@ func (f *form) Size(w, h int) (int, int) {
 func (f *form) labelWidth() int {
 	w := 0
 	for _, fl := range f.fields {
-		w = max(w, ansi.StringWidth(fl.label))
+		if !fl.hidden {
+			w = max(w, ansi.StringWidth(fl.label))
+		}
 	}
 	return w + 2
 }
@@ -138,23 +175,36 @@ func (f *form) labelWidth() int {
 // View renders the form as a focused panel of exactly pw×ph cells.
 func (f *form) View(t *theme.Theme, pw, ph int) string {
 	iw, ih := widgets.PanelInner(pw, ph)
-	n := len(f.fields)
+	n := f.visibleFields()
 	spacious := ih >= 2*n+2
 	lw := min(f.labelWidth(), max(iw/3, 1))
 	inputW := max(iw-lw, 1)
 
 	var lines []string
+	focusLine := 0
 	for i, fl := range f.fields {
+		if fl.hidden {
+			continue
+		}
 		focused := i == f.focus
+		if focused {
+			focusLine = len(lines)
+		}
 		label := fl.label
 		labelColor := t.P.Muted
-		if focused {
-			labelColor = t.P.Accent
-		}
-		if fl.err != "" {
+		switch {
+		case fl.err != "":
 			labelColor = t.P.Bad
+		case focused:
+			labelColor = t.P.Accent
+		case fl.disabled != "":
+			labelColor = t.P.Faint
 		}
-		row := widgets.FitLine(fg(labelColor, label), lw-1) + " " + fl.input.View(t, inputW, focused)
+		input := fl.input.View(t, inputW, focused)
+		if fl.disabled != "" {
+			input = t.P.Surface.BG() + widgets.FitLine(fg(t.P.Faint, fl.disabled), inputW) + theme.Reset
+		}
+		row := widgets.FitLine(fg(labelColor, label), lw-1) + " " + input
 		lines = append(lines, row)
 		if !spacious {
 			continue
@@ -170,7 +220,7 @@ func (f *form) View(t *theme.Theme, pw, ph int) string {
 	fieldRows := len(lines)
 	visible := max(ih-2, 1)
 	if !spacious && fieldRows > visible {
-		start := clamp(f.focus-visible/2, 0, fieldRows-visible)
+		start := clamp(focusLine-visible/2, 0, fieldRows-visible)
 		lines = lines[start : start+visible]
 	}
 	lines = append(lines, "", footer)
@@ -195,6 +245,8 @@ func (f *form) footer(t *theme.Theme) string {
 		return fg(t.P.Bad, glyphCross+" "+f.err)
 	case len(f.fields) > 0 && f.fields[f.focus].err != "":
 		return fg(t.P.Bad, glyphCross+" "+f.fields[f.focus].label+": "+f.fields[f.focus].err)
+	case f.keys != "":
+		return fg(t.P.Faint, f.keys)
 	default:
 		return fg(t.P.Faint, "tab next · enter on last field or ctrl+s save · esc cancel")
 	}
