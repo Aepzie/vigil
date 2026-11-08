@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CraguS/vigil/internal/metrics"
+	"github.com/Aepzie/vigil/internal/metrics"
 )
 
 func readFixture(t testing.TB, parts ...string) string {

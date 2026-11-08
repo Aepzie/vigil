@@ -8,8 +8,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/CraguS/vigil/internal/metrics"
-	"github.com/CraguS/vigil/internal/store"
+	"github.com/Aepzie/vigil/internal/metrics"
+	"github.com/Aepzie/vigil/internal/store"
 )
 
 const (

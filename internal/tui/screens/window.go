@@ -8,9 +8,9 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/CraguS/vigil/internal/format"
-	"github.com/CraguS/vigil/internal/theme"
-	"github.com/CraguS/vigil/internal/widgets"
+	"github.com/Aepzie/vigil/internal/format"
+	"github.com/Aepzie/vigil/internal/theme"
+	"github.com/Aepzie/vigil/internal/widgets"
 )
 
 // historyWindows are the selectable time spans of the Detail charts,

@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CraguS/vigil/internal/auth"
-	"github.com/CraguS/vigil/internal/compat"
+	"github.com/Aepzie/vigil/internal/auth"
+	"github.com/Aepzie/vigil/internal/compat"
 )
 
 func testIO(stdin string) (stdio, *bytes.Buffer, *bytes.Buffer) {

@@ -6,13 +6,13 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/CraguS/vigil/internal/alerts"
-	"github.com/CraguS/vigil/internal/format"
-	"github.com/CraguS/vigil/internal/metrics"
-	"github.com/CraguS/vigil/internal/sanitize"
-	"github.com/CraguS/vigil/internal/store"
-	"github.com/CraguS/vigil/internal/theme"
-	"github.com/CraguS/vigil/internal/tui/ui"
+	"github.com/Aepzie/vigil/internal/alerts"
+	"github.com/Aepzie/vigil/internal/format"
+	"github.com/Aepzie/vigil/internal/metrics"
+	"github.com/Aepzie/vigil/internal/sanitize"
+	"github.com/Aepzie/vigil/internal/store"
+	"github.com/Aepzie/vigil/internal/theme"
+	"github.com/Aepzie/vigil/internal/tui/ui"
 )
 
 const (

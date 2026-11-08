@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/CraguS/vigil/internal/metrics"
-	"github.com/CraguS/vigil/internal/store"
+	"github.com/Aepzie/vigil/internal/metrics"
+	"github.com/Aepzie/vigil/internal/store"
 )
 
 var t0 = time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)

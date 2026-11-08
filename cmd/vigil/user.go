@@ -11,8 +11,8 @@ import (
 
 	"github.com/charmbracelet/x/term"
 
-	"github.com/CraguS/vigil/internal/auth"
-	"github.com/CraguS/vigil/internal/sshclient"
+	"github.com/Aepzie/vigil/internal/auth"
+	"github.com/Aepzie/vigil/internal/sshclient"
 )
 
 const userUsage = `Usage:

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/CraguS/vigil/internal/metrics"
+	"github.com/Aepzie/vigil/internal/metrics"
 )
 
 // remoteCommand runs the poll script, sent on stdin, with a POSIX shell

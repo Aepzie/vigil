@@ -1,7 +1,7 @@
 package widgets
 
 import (
-	"github.com/CraguS/vigil/internal/theme"
+	"github.com/Aepzie/vigil/internal/theme"
 	"github.com/charmbracelet/x/ansi"
 )
 

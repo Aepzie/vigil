@@ -7,10 +7,10 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/CraguS/vigil/internal/alerts"
-	"github.com/CraguS/vigil/internal/store"
-	"github.com/CraguS/vigil/internal/theme"
-	"github.com/CraguS/vigil/internal/tui/ui"
+	"github.com/Aepzie/vigil/internal/alerts"
+	"github.com/Aepzie/vigil/internal/store"
+	"github.com/Aepzie/vigil/internal/theme"
+	"github.com/Aepzie/vigil/internal/tui/ui"
 )
 
 var frameSizes = []struct{ w, h int }{

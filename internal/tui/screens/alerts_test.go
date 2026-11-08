@@ -8,8 +8,8 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/CraguS/vigil/internal/alerts"
-	"github.com/CraguS/vigil/internal/tui/ui"
+	"github.com/Aepzie/vigil/internal/alerts"
+	"github.com/Aepzie/vigil/internal/tui/ui"
 )
 
 // alertsFleet adds an active disk alert with a mount subject to fakeFleet.

@@ -33,17 +33,17 @@ import (
 	"github.com/charmbracelet/colorprofile"
 	gossh "golang.org/x/crypto/ssh"
 
-	"github.com/CraguS/vigil/internal/alerts"
-	"github.com/CraguS/vigil/internal/auth"
-	"github.com/CraguS/vigil/internal/collector"
-	"github.com/CraguS/vigil/internal/compat"
-	"github.com/CraguS/vigil/internal/fsperm"
-	"github.com/CraguS/vigil/internal/sanitize"
-	"github.com/CraguS/vigil/internal/sshclient"
-	"github.com/CraguS/vigil/internal/store"
-	"github.com/CraguS/vigil/internal/theme"
-	"github.com/CraguS/vigil/internal/tui"
-	"github.com/CraguS/vigil/internal/tui/ui"
+	"github.com/Aepzie/vigil/internal/alerts"
+	"github.com/Aepzie/vigil/internal/auth"
+	"github.com/Aepzie/vigil/internal/collector"
+	"github.com/Aepzie/vigil/internal/compat"
+	"github.com/Aepzie/vigil/internal/fsperm"
+	"github.com/Aepzie/vigil/internal/sanitize"
+	"github.com/Aepzie/vigil/internal/sshclient"
+	"github.com/Aepzie/vigil/internal/store"
+	"github.com/Aepzie/vigil/internal/theme"
+	"github.com/Aepzie/vigil/internal/tui"
+	"github.com/Aepzie/vigil/internal/tui/ui"
 )
 
 // HostKeyFile is the name of the server host key inside the data

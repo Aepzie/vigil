@@ -38,7 +38,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/CraguS/vigil/internal/fsperm"
+	"github.com/Aepzie/vigil/internal/fsperm"
 )
 
 // File names inside the data directory.

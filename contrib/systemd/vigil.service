@@ -16,7 +16,7 @@
 
 [Unit]
 Description=vigil SSH monitoring dashboard
-Documentation=https://github.com/CraguS/vigil
+Documentation=https://github.com/Aepzie/vigil
 After=network-online.target
 Wants=network-online.target
 

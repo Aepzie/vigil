@@ -3,10 +3,10 @@ package tui
 import (
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/CraguS/vigil/internal/compat"
-	"github.com/CraguS/vigil/internal/theme"
-	"github.com/CraguS/vigil/internal/tui/ui"
-	"github.com/CraguS/vigil/internal/widgets"
+	"github.com/Aepzie/vigil/internal/compat"
+	"github.com/Aepzie/vigil/internal/theme"
+	"github.com/Aepzie/vigil/internal/tui/ui"
+	"github.com/Aepzie/vigil/internal/widgets"
 )
 
 // renderFooter draws the last row: the active screen's hints followed by

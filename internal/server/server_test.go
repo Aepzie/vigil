@@ -21,12 +21,12 @@ import (
 	"charm.land/ssh"
 	gossh "golang.org/x/crypto/ssh"
 
-	"github.com/CraguS/vigil/internal/alerts"
-	"github.com/CraguS/vigil/internal/auth"
-	"github.com/CraguS/vigil/internal/collector"
-	"github.com/CraguS/vigil/internal/demo"
-	"github.com/CraguS/vigil/internal/sshclient"
-	"github.com/CraguS/vigil/internal/store"
+	"github.com/Aepzie/vigil/internal/alerts"
+	"github.com/Aepzie/vigil/internal/auth"
+	"github.com/Aepzie/vigil/internal/collector"
+	"github.com/Aepzie/vigil/internal/demo"
+	"github.com/Aepzie/vigil/internal/sshclient"
+	"github.com/Aepzie/vigil/internal/store"
 )
 
 const (

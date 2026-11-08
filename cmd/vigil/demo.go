@@ -10,15 +10,15 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/CraguS/vigil/internal/alerts"
-	"github.com/CraguS/vigil/internal/auth"
-	"github.com/CraguS/vigil/internal/compat"
-	"github.com/CraguS/vigil/internal/demo"
-	"github.com/CraguS/vigil/internal/server"
-	"github.com/CraguS/vigil/internal/store"
-	"github.com/CraguS/vigil/internal/theme"
-	"github.com/CraguS/vigil/internal/tui"
-	"github.com/CraguS/vigil/internal/tui/ui"
+	"github.com/Aepzie/vigil/internal/alerts"
+	"github.com/Aepzie/vigil/internal/auth"
+	"github.com/Aepzie/vigil/internal/compat"
+	"github.com/Aepzie/vigil/internal/demo"
+	"github.com/Aepzie/vigil/internal/server"
+	"github.com/Aepzie/vigil/internal/store"
+	"github.com/Aepzie/vigil/internal/theme"
+	"github.com/Aepzie/vigil/internal/tui"
+	"github.com/Aepzie/vigil/internal/tui/ui"
 )
 
 // demoPrime is how many samples per server are generated up front so

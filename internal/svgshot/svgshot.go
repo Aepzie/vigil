@@ -17,7 +17,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/CraguS/vigil/internal/theme"
+	"github.com/Aepzie/vigil/internal/theme"
 )
 
 // FontFamily is the monospace font stack of the terminal text.

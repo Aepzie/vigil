@@ -8,12 +8,12 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/CraguS/vigil/internal/alerts"
-	"github.com/CraguS/vigil/internal/collector"
-	"github.com/CraguS/vigil/internal/metrics"
-	"github.com/CraguS/vigil/internal/sanitize"
-	"github.com/CraguS/vigil/internal/sshclient"
-	"github.com/CraguS/vigil/internal/store"
+	"github.com/Aepzie/vigil/internal/alerts"
+	"github.com/Aepzie/vigil/internal/collector"
+	"github.com/Aepzie/vigil/internal/metrics"
+	"github.com/Aepzie/vigil/internal/sanitize"
+	"github.com/Aepzie/vigil/internal/sshclient"
+	"github.com/Aepzie/vigil/internal/store"
 )
 
 // dataDirHelp documents the --data flag.

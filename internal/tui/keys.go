@@ -1,7 +1,7 @@
 package tui
 
 import (
-	"github.com/CraguS/vigil/internal/tui/ui"
+	"github.com/Aepzie/vigil/internal/tui/ui"
 )
 
 // Global key bindings, matched against tea.KeyPressMsg.String().

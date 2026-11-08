@@ -12,8 +12,8 @@ import (
 	"charm.land/ssh"
 	gossh "golang.org/x/crypto/ssh"
 
-	"github.com/CraguS/vigil/internal/store"
-	"github.com/CraguS/vigil/internal/tui/ui"
+	"github.com/Aepzie/vigil/internal/store"
+	"github.com/Aepzie/vigil/internal/tui/ui"
 )
 
 // remoteShell is what a session needs from an interactive shell; it is

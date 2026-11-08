@@ -6,7 +6,7 @@ package alerts
 import (
 	"time"
 
-	"github.com/CraguS/vigil/internal/store"
+	"github.com/Aepzie/vigil/internal/store"
 )
 
 // Kind is what an alert is about.

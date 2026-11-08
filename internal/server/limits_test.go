@@ -14,7 +14,7 @@ import (
 	"charm.land/log/v2"
 	gossh "golang.org/x/crypto/ssh"
 
-	"github.com/CraguS/vigil/internal/auth"
+	"github.com/Aepzie/vigil/internal/auth"
 )
 
 func TestConnLimiter(t *testing.T) {

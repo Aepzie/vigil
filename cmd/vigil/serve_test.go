@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CraguS/vigil/internal/auth"
-	"github.com/CraguS/vigil/internal/fsperm"
+	"github.com/Aepzie/vigil/internal/auth"
+	"github.com/Aepzie/vigil/internal/fsperm"
 )
 
 func TestIsTerminalBuffer(t *testing.T) {

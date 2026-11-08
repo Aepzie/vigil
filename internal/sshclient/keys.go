@@ -16,8 +16,8 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/CraguS/vigil/internal/fsperm"
-	"github.com/CraguS/vigil/internal/store"
+	"github.com/Aepzie/vigil/internal/fsperm"
+	"github.com/Aepzie/vigil/internal/store"
 )
 
 const (

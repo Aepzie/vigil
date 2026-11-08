@@ -6,7 +6,7 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/CraguS/vigil/internal/theme"
+	"github.com/Aepzie/vigil/internal/theme"
 )
 
 // tabWidth is the distance between tab stops.

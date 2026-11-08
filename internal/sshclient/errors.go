@@ -10,7 +10,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/CraguS/vigil/internal/sanitize"
+	"github.com/Aepzie/vigil/internal/sanitize"
 )
 
 // ErrHostKeyMismatch is returned when a server presents a host key that

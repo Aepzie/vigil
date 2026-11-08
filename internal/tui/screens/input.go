@@ -7,8 +7,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/CraguS/vigil/internal/sanitize"
-	"github.com/CraguS/vigil/internal/theme"
+	"github.com/Aepzie/vigil/internal/sanitize"
+	"github.com/Aepzie/vigil/internal/theme"
 )
 
 // maxInputRunes bounds the length of any single-line input.
