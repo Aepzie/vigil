@@ -32,7 +32,8 @@ type ChartOpts struct {
 	// Step is the sampling interval between values, used for X labels
 	// such as "-60s", "-30s", "now".
 	Step time.Duration
-	// YLabel formats Y axis values; nil uses format.Number.
+	// YLabel formats Y axis values; nil uses format.Number for values
+	// from 1000 up and the shortest exact decimal ("7.5", "0.2") below.
 	YLabel func(float64) string
 	// HideAxes drops the Y and X axis (used for compact panels).
 	HideAxes bool
@@ -111,7 +112,7 @@ func newChartFrame(o ChartOpts, dataMax float64) chartFrame {
 	}
 	f.gridRow = make([]bool, f.plotH)
 	f.yLabels = make(map[int]string)
-	label := yLabeler(o.YLabel, step)
+	label := yLabeler(o.YLabel)
 	labelW := 0
 	addTick := func(v float64, row int) {
 		if row < 0 || row > f.plotH || (row == f.plotH && !f.showX) {
@@ -154,17 +155,23 @@ func (f chartFrame) valueRow(v float64) int {
 	return f.plotH - int(math.Round(v/f.top*float64(f.plotH)))
 }
 
-// yLabeler returns the Y label formatter. The default keeps enough
-// decimals for fractional steps, which format.Number would round away.
-func yLabeler(custom func(float64) string, step float64) func(float64) string {
+// yLabeler returns the Y label formatter: custom when set, otherwise
+// defaultYLabel.
+func yLabeler(custom func(float64) string) func(float64) string {
 	if custom != nil {
 		return custom
 	}
-	if step >= 1 {
-		return format.Number
+	return defaultYLabel
+}
+
+// defaultYLabel uses format.Number from 1000 up and the shortest exact
+// decimal below, where format.Number would round 7.5 to "8" and 0.2 to
+// "0".
+func defaultYLabel(v float64) string {
+	if math.Abs(v) >= 1000 {
+		return format.Number(v)
 	}
-	decimals := int(math.Ceil(-math.Log10(step) - 1e-9))
-	return func(v float64) string { return strconv.FormatFloat(v, 'f', decimals, 64) }
+	return strconv.FormatFloat(math.Round(v*1e6)/1e6, 'f', -1, 64)
 }
 
 // render draws the gutter, delegates every plot row to drawRow and adds

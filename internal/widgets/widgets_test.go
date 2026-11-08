@@ -272,6 +272,24 @@ func near(a, b float64) bool {
 	return math.Abs(a-b) <= 1e-9*math.Max(1, math.Abs(b))
 }
 
+func TestDefaultYLabel(t *testing.T) {
+	tests := map[float64]string{
+		0:                   "0",
+		7.5:                 "7.5",
+		0.30000000000000004: "0.3",
+		0.05:                "0.05",
+		250:                 "250",
+		1000:                "1.0k",
+		12400:               "12.4k",
+		3e6:                 "3.0M",
+	}
+	for v, want := range tests {
+		if got := defaultYLabel(v); got != want {
+			t.Errorf("defaultYLabel(%v) = %q, want %q", v, got, want)
+		}
+	}
+}
+
 func TestCompactDuration(t *testing.T) {
 	tests := map[time.Duration]string{
 		30 * time.Second:        "30s",
