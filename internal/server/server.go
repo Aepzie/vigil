@@ -465,6 +465,9 @@ func (s *server) uiDeps(sess ssh.Session, term string, st *session) *ui.Deps {
 		d.Shell = st.shellFunc(func(srv store.Server, width, height int) remoteShell {
 			return dialer.NewShell(srv, d.Term, width, height)
 		})
+		if !d.ReadOnly {
+			d.InstallKey = dialer.InstallKey
+		}
 	}
 	return d
 }
