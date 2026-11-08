@@ -12,79 +12,143 @@
 <rect x="1208.8" y="48" width="58.8" height="17" fill="#f87171"/>
 <rect x="24.4" y="65" width="117.6" height="17" fill="#a78bfa"/>
 <rect x="32.8" y="218" width="1226.4" height="17" fill="#181b20"/>
-<rect x="528.4" y="226.5" width="50.4" height="8.5" fill="#279d72"/>
-<rect x="578.8" y="228.63" width="33.6" height="6.38" fill="#248f68"/>
-<rect x="931.6" y="218" width="8.4" height="17" fill="#22d3ee"/>
-<rect x="940" y="220.13" width="8.4" height="14.88" fill="#20c5df"/>
-<rect x="948.4" y="218" width="8.4" height="17" fill="#22d3ee"/>
-<rect x="956.8" y="220.13" width="8.4" height="14.88" fill="#20c5df"/>
-<rect x="965.2" y="218" width="8.4" height="17" fill="#22d3ee"/>
-<rect x="973.6" y="220.13" width="8.4" height="14.88" fill="#20c5df"/>
-<rect x="982" y="218" width="16.8" height="17" fill="#22d3ee"/>
-<rect x="998.8" y="220.13" width="8.4" height="14.88" fill="#20c5df"/>
-<rect x="1007.2" y="218" width="8.4" height="17" fill="#22d3ee"/>
-<rect x="528.4" y="264.75" width="84" height="4.25" fill="#20825e"/>
-<rect x="931.6" y="252" width="8.4" height="17" fill="#22d3ee"/>
-<rect x="940" y="254.13" width="8.4" height="14.88" fill="#20c5df"/>
-<rect x="948.4" y="256.25" width="8.4" height="12.75" fill="#1eb8cf"/>
-<rect x="956.8" y="252" width="16.8" height="17" fill="#22d3ee"/>
-<rect x="973.6" y="254.13" width="25.2" height="14.88" fill="#20c5df"/>
-<rect x="998.8" y="256.25" width="8.4" height="12.75" fill="#1eb8cf"/>
-<rect x="1007.2" y="254.13" width="8.4" height="14.88" fill="#20c5df"/>
-<rect x="528.4" y="271.13" width="84" height="14.88" fill="#ebb322"/>
-<rect x="931.6" y="279.63" width="33.6" height="6.38" fill="#178fa2"/>
-<rect x="965.2" y="269" width="8.4" height="34" fill="#22d3ee"/>
-<rect x="973.6" y="271.13" width="16.8" height="14.88" fill="#20c5df"/>
-<rect x="990.4" y="273.25" width="8.4" height="12.75" fill="#1eb8cf"/>
-<rect x="998.8" y="275.38" width="16.8" height="10.63" fill="#1caac0"/>
-<rect x="528.4" y="292.38" width="8.4" height="10.63" fill="#2aaa7b"/>
-<rect x="536.8" y="294.5" width="75.6" height="8.5" fill="#279d72"/>
-<rect x="931.6" y="288.13" width="8.4" height="14.88" fill="#20c5df"/>
-<rect x="940" y="286" width="16.8" height="17" fill="#22d3ee"/>
-<rect x="956.8" y="290.25" width="8.4" height="12.75" fill="#1eb8cf"/>
-<rect x="973.6" y="290.25" width="8.4" height="12.75" fill="#1eb8cf"/>
-<rect x="982" y="288.13" width="8.4" height="14.88" fill="#20c5df"/>
-<rect x="990.4" y="286" width="8.4" height="17" fill="#22d3ee"/>
-<rect x="998.8" y="288.13" width="8.4" height="14.88" fill="#20c5df"/>
-<rect x="1007.2" y="290.25" width="8.4" height="12.75" fill="#1eb8cf"/>
-<rect x="528.4" y="315.75" width="50.4" height="4.25" fill="#20825e"/>
-<rect x="578.8" y="313.63" width="8.4" height="6.38" fill="#248f68"/>
-<rect x="587.2" y="315.75" width="25.2" height="4.25" fill="#20825e"/>
-<rect x="931.6" y="305.13" width="42" height="14.88" fill="#20c5df"/>
-<rect x="973.6" y="303" width="8.4" height="34" fill="#22d3ee"/>
-<rect x="982" y="305.13" width="16.8" height="14.88" fill="#20c5df"/>
-<rect x="998.8" y="303" width="8.4" height="17" fill="#22d3ee"/>
-<rect x="1007.2" y="305.13" width="8.4" height="14.88" fill="#20c5df"/>
-<rect x="528.4" y="330.63" width="84" height="6.38" fill="#248f68"/>
-<rect x="931.6" y="322.13" width="16.8" height="14.88" fill="#20c5df"/>
-<rect x="948.4" y="320" width="8.4" height="17" fill="#22d3ee"/>
-<rect x="956.8" y="322.13" width="16.8" height="14.88" fill="#20c5df"/>
-<rect x="982" y="322.13" width="25.2" height="14.88" fill="#20c5df"/>
-<rect x="1007.2" y="320" width="8.4" height="51" fill="#22d3ee"/>
-<rect x="528.4" y="347.63" width="16.8" height="6.38" fill="#248f68"/>
-<rect x="545.2" y="345.5" width="16.8" height="8.5" fill="#279d72"/>
-<rect x="562" y="347.63" width="50.4" height="6.38" fill="#248f68"/>
-<rect x="931.6" y="337" width="8.4" height="34" fill="#22d3ee"/>
-<rect x="940" y="339.13" width="16.8" height="14.88" fill="#20c5df"/>
-<rect x="956.8" y="341.25" width="8.4" height="12.75" fill="#1eb8cf"/>
-<rect x="965.2" y="339.13" width="16.8" height="14.88" fill="#20c5df"/>
-<rect x="982" y="337" width="8.4" height="17" fill="#22d3ee"/>
-<rect x="990.4" y="341.25" width="8.4" height="12.75" fill="#1eb8cf"/>
-<rect x="998.8" y="339.13" width="8.4" height="14.88" fill="#20c5df"/>
-<rect x="528.4" y="362.5" width="84" height="8.5" fill="#279d72"/>
-<rect x="940" y="356.13" width="16.8" height="14.88" fill="#20c5df"/>
-<rect x="956.8" y="354" width="16.8" height="17" fill="#22d3ee"/>
-<rect x="973.6" y="356.13" width="8.4" height="14.88" fill="#20c5df"/>
-<rect x="982" y="354" width="16.8" height="17" fill="#22d3ee"/>
-<rect x="998.8" y="356.13" width="8.4" height="14.88" fill="#20c5df"/>
+<rect x="469.6" y="226.5" width="8.4" height="8.5" fill="#279d72"/>
+<rect x="478" y="224.38" width="8.4" height="10.63" fill="#2aaa7b"/>
+<rect x="486.4" y="226.5" width="58.8" height="8.5" fill="#279d72"/>
+<rect x="545.2" y="228.63" width="8.4" height="6.38" fill="#248f68"/>
+<rect x="553.6" y="226.5" width="33.6" height="8.5" fill="#279d72"/>
+<rect x="906.4" y="224.38" width="16.8" height="10.63" fill="#1caac0"/>
+<rect x="923.2" y="226.5" width="16.8" height="8.5" fill="#199db1"/>
+<rect x="940" y="228.63" width="16.8" height="6.38" fill="#178fa2"/>
+<rect x="956.8" y="222.25" width="8.4" height="12.75" fill="#1eb8cf"/>
+<rect x="965.2" y="224.38" width="8.4" height="10.63" fill="#1caac0"/>
+<rect x="973.6" y="226.5" width="42" height="8.5" fill="#199db1"/>
+<rect x="469.6" y="264.75" width="33.6" height="4.25" fill="#20825e"/>
+<rect x="503.2" y="262.63" width="8.4" height="6.38" fill="#248f68"/>
+<rect x="511.6" y="264.75" width="75.6" height="4.25" fill="#20825e"/>
+<rect x="906.4" y="256.25" width="75.6" height="12.75" fill="#1eb8cf"/>
+<rect x="982" y="254.13" width="33.6" height="14.88" fill="#20c5df"/>
+<rect x="469.6" y="271.13" width="117.6" height="14.88" fill="#ebb322"/>
+<rect x="906.4" y="279.63" width="92.4" height="6.38" fill="#178fa2"/>
+<rect x="998.8" y="277.5" width="8.4" height="8.5" fill="#199db1"/>
+<rect x="1007.2" y="273.25" width="8.4" height="12.75" fill="#1eb8cf"/>
+<rect x="469.6" y="294.5" width="33.6" height="8.5" fill="#279d72"/>
+<rect x="503.2" y="292.38" width="16.8" height="10.63" fill="#2aaa7b"/>
+<rect x="520" y="294.5" width="8.4" height="8.5" fill="#279d72"/>
+<rect x="528.4" y="292.38" width="50.4" height="10.63" fill="#2aaa7b"/>
+<rect x="578.8" y="294.5" width="8.4" height="8.5" fill="#279d72"/>
+<rect x="906.4" y="296.63" width="8.4" height="6.38" fill="#178fa2"/>
+<rect x="914.8" y="290.25" width="16.8" height="12.75" fill="#1eb8cf"/>
+<rect x="931.6" y="292.38" width="8.4" height="10.63" fill="#1caac0"/>
+<rect x="940" y="294.5" width="75.6" height="8.5" fill="#199db1"/>
+<rect x="469.6" y="313.63" width="92.4" height="6.38" fill="#248f68"/>
+<rect x="562" y="315.75" width="8.4" height="4.25" fill="#20825e"/>
+<rect x="570.4" y="313.63" width="16.8" height="6.38" fill="#248f68"/>
+<rect x="906.4" y="307.25" width="8.4" height="12.75" fill="#1eb8cf"/>
+<rect x="914.8" y="309.38" width="33.6" height="10.63" fill="#1caac0"/>
+<rect x="948.4" y="307.25" width="8.4" height="12.75" fill="#1eb8cf"/>
+<rect x="956.8" y="309.38" width="8.4" height="10.63" fill="#1caac0"/>
+<rect x="965.2" y="307.25" width="16.8" height="12.75" fill="#1eb8cf"/>
+<rect x="982" y="309.38" width="8.4" height="10.63" fill="#1caac0"/>
+<rect x="990.4" y="307.25" width="8.4" height="12.75" fill="#1eb8cf"/>
+<rect x="998.8" y="309.38" width="16.8" height="10.63" fill="#1caac0"/>
+<rect x="469.6" y="330.63" width="16.8" height="6.38" fill="#248f68"/>
+<rect x="486.4" y="328.5" width="67.2" height="8.5" fill="#279d72"/>
+<rect x="553.6" y="330.63" width="33.6" height="6.38" fill="#248f68"/>
+<rect x="906.4" y="324.25" width="100.8" height="12.75" fill="#1eb8cf"/>
+<rect x="1007.2" y="322.13" width="8.4" height="14.88" fill="#20c5df"/>
+<rect x="469.6" y="345.5" width="84" height="8.5" fill="#279d72"/>
+<rect x="553.6" y="347.63" width="16.8" height="6.38" fill="#248f68"/>
+<rect x="570.4" y="345.5" width="8.4" height="8.5" fill="#279d72"/>
+<rect x="578.8" y="347.63" width="8.4" height="6.38" fill="#248f68"/>
+<rect x="906.4" y="343.38" width="33.6" height="10.63" fill="#1caac0"/>
+<rect x="940" y="341.25" width="8.4" height="12.75" fill="#1eb8cf"/>
+<rect x="948.4" y="343.38" width="16.8" height="10.63" fill="#1caac0"/>
+<rect x="965.2" y="341.25" width="16.8" height="12.75" fill="#1eb8cf"/>
+<rect x="982" y="343.38" width="16.8" height="10.63" fill="#1caac0"/>
+<rect x="998.8" y="341.25" width="16.8" height="12.75" fill="#1eb8cf"/>
+<rect x="469.6" y="360.38" width="8.4" height="10.63" fill="#2aaa7b"/>
+<rect x="478" y="358.25" width="8.4" height="12.75" fill="#2db885"/>
+<rect x="486.4" y="360.38" width="42" height="10.63" fill="#2aaa7b"/>
+<rect x="528.4" y="362.5" width="16.8" height="8.5" fill="#279d72"/>
+<rect x="545.2" y="360.38" width="8.4" height="10.63" fill="#2aaa7b"/>
+<rect x="553.6" y="362.5" width="8.4" height="8.5" fill="#279d72"/>
+<rect x="562" y="360.38" width="25.2" height="10.63" fill="#2aaa7b"/>
+<rect x="906.4" y="358.25" width="8.4" height="12.75" fill="#1eb8cf"/>
+<rect x="914.8" y="362.5" width="16.8" height="8.5" fill="#199db1"/>
+<rect x="931.6" y="358.25" width="8.4" height="12.75" fill="#1eb8cf"/>
+<rect x="940" y="360.38" width="8.4" height="10.63" fill="#1caac0"/>
+<rect x="948.4" y="362.5" width="16.8" height="8.5" fill="#199db1"/>
+<rect x="965.2" y="364.63" width="50.4" height="6.38" fill="#178fa2"/>
+<rect x="158.8" y="587.75" width="16.8" height="4.25" fill="#a68af9"/>
+<rect x="209.2" y="589.88" width="8.4" height="2.13" fill="#a68af9"/>
+<rect x="251.2" y="587.75" width="8.4" height="4.25" fill="#a68af9"/>
+<rect x="259.6" y="589.88" width="8.4" height="2.13" fill="#a68af9"/>
+<rect x="268" y="587.75" width="16.8" height="4.25" fill="#a68af9"/>
+<rect x="284.8" y="585.63" width="16.8" height="6.38" fill="#a68af9"/>
+<rect x="301.6" y="587.75" width="8.4" height="4.25" fill="#a68af9"/>
+<rect x="310" y="589.88" width="16.8" height="2.13" fill="#a68af9"/>
+<rect x="343.6" y="589.88" width="8.4" height="2.13" fill="#a68af9"/>
+<rect x="368.8" y="587.75" width="8.4" height="4.25" fill="#a68af9"/>
+<rect x="377.2" y="581.38" width="8.4" height="10.63" fill="#a68af9"/>
+<rect x="385.6" y="585.63" width="8.4" height="6.38" fill="#a68af9"/>
+<rect x="394" y="589.88" width="8.4" height="2.13" fill="#a68af9"/>
+<rect x="410.8" y="589.88" width="8.4" height="2.13" fill="#a68af9"/>
+<rect x="452.8" y="589.88" width="8.4" height="2.13" fill="#a68af9"/>
+<rect x="486.4" y="589.88" width="8.4" height="2.13" fill="#a68af9"/>
+<rect x="74.8" y="606.88" width="8.4" height="2.13" fill="#9c82ea"/>
+<rect x="83.2" y="604.75" width="8.4" height="4.25" fill="#9c82ea"/>
+<rect x="91.6" y="602.63" width="8.4" height="6.38" fill="#9c82ea"/>
+<rect x="100" y="600.5" width="16.8" height="8.5" fill="#9c82ea"/>
+<rect x="116.8" y="598.38" width="8.4" height="10.63" fill="#9c82ea"/>
+<rect x="125.2" y="594.13" width="25.2" height="14.88" fill="#9c82ea"/>
+<rect x="150.4" y="592" width="33.6" height="17" fill="#9c82ea"/>
+<rect x="184" y="594.13" width="16.8" height="14.88" fill="#9c82ea"/>
+<rect x="200.8" y="592" width="16.8" height="17" fill="#9c82ea"/>
+<rect x="217.6" y="596.25" width="8.4" height="12.75" fill="#9c82ea"/>
+<rect x="226" y="594.13" width="25.2" height="14.88" fill="#9c82ea"/>
+<rect x="251.2" y="592" width="100.8" height="17" fill="#9c82ea"/>
+<rect x="352" y="594.13" width="16.8" height="14.88" fill="#9c82ea"/>
+<rect x="368.8" y="592" width="33.6" height="17" fill="#9c82ea"/>
+<rect x="402.4" y="594.13" width="8.4" height="14.88" fill="#9c82ea"/>
+<rect x="410.8" y="592" width="8.4" height="17" fill="#9c82ea"/>
+<rect x="419.2" y="594.13" width="8.4" height="14.88" fill="#9c82ea"/>
+<rect x="427.6" y="596.25" width="16.8" height="12.75" fill="#9c82ea"/>
+<rect x="444.4" y="592" width="16.8" height="17" fill="#9c82ea"/>
+<rect x="461.2" y="594.13" width="8.4" height="14.88" fill="#9c82ea"/>
+<rect x="469.6" y="596.25" width="8.4" height="12.75" fill="#9c82ea"/>
+<rect x="478" y="594.13" width="8.4" height="14.88" fill="#9c82ea"/>
+<rect x="486.4" y="592" width="8.4" height="17" fill="#9c82ea"/>
+<rect x="494.8" y="594.13" width="8.4" height="14.88" fill="#9c82ea"/>
+<rect x="503.2" y="598.38" width="8.4" height="10.63" fill="#9c82ea"/>
+<rect x="511.6" y="602.63" width="8.4" height="6.38" fill="#9c82ea"/>
+<rect x="520" y="600.5" width="8.4" height="8.5" fill="#9c82ea"/>
+<rect x="528.4" y="598.38" width="16.8" height="10.63" fill="#9c82ea"/>
+<rect x="545.2" y="600.5" width="8.4" height="8.5" fill="#9c82ea"/>
+<rect x="553.6" y="602.63" width="8.4" height="6.38" fill="#9c82ea"/>
+<rect x="562" y="592" width="8.4" height="17" fill="#9c82ea"/>
+<rect x="570.4" y="594.13" width="8.4" height="14.88" fill="#9c82ea"/>
+<rect x="578.8" y="596.25" width="8.4" height="12.75" fill="#9c82ea"/>
+<rect x="587.2" y="600.5" width="8.4" height="8.5" fill="#9c82ea"/>
+<rect x="595.6" y="598.38" width="8.4" height="10.63" fill="#9c82ea"/>
+<rect x="604" y="602.63" width="8.4" height="6.38" fill="#9c82ea"/>
+<rect x="612.4" y="604.75" width="8.4" height="4.25" fill="#9c82ea"/>
+<rect x="74.8" y="609" width="554.4" height="17" fill="#937adc"/>
+<rect x="74.8" y="626" width="554.4" height="17" fill="#8972ce"/>
+<rect x="74.8" y="643" width="554.4" height="17" fill="#806bc0"/>
+<rect x="74.8" y="660" width="554.4" height="17" fill="#7663b1"/>
+<rect x="74.8" y="677" width="554.4" height="17" fill="#6d5ba3"/>
+<rect x="74.8" y="694" width="554.4" height="17" fill="#635395"/>
+<rect x="74.8" y="711" width="554.4" height="17" fill="#594b86"/>
+<rect x="74.8" y="728" width="554.4" height="17" fill="#504378"/>
 </g>
 <g class="t">
 <text x="24.4" y="61.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0 b">◆ vigil</text>
-<text x="91.6" y="61.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">3dfe03d</text>
-<text x="158.8" y="61.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">·</text>
-<text x="175.6" y="61.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">up 2d 4h</text>
-<text x="251.2" y="61.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">·</text>
-<text x="268" y="61.4" textLength="92.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">admin@vigil</text>
+<text x="91.6" y="61.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">v0.1.0</text>
+<text x="150.4" y="61.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">·</text>
+<text x="167.2" y="61.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">up 2d 4h</text>
+<text x="242.8" y="61.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">·</text>
+<text x="259.6" y="61.4" textLength="92.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">admin@vigil</text>
 <text x="982" y="61.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">●</text>
 <text x="998.8" y="61.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">8 online</text>
 <text x="1074.4" y="61.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">·</text>
@@ -97,11 +161,10 @@
 <text x="259.6" y="78.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">3</text>
 <text x="276.4" y="78.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">◈ Detail</text>
 <text x="360.4" y="78.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">4</text>
-<text x="377.2" y="78.4" textLength="16.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">⚡</text>
-<text x="402.4" y="78.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">Alerts</text>
-<text x="461.2" y="78.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c5 b">3</text>
-<text x="486.4" y="78.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">5</text>
-<text x="503.2" y="78.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">✱ Settings</text>
+<text x="377.2" y="78.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">▲ Alerts</text>
+<text x="452.8" y="78.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c5 b">3</text>
+<text x="478" y="78.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">5</text>
+<text x="494.8" y="78.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">✱ Settings</text>
 <text x="16" y="95.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────</text>
 <text x="16" y="112.4" textLength="16.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">╭─</text>
 <text x="41.2" y="112.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3 b">Online</text>
@@ -123,11 +186,11 @@
 <text x="427.6" y="129.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│ │</text>
 <text x="528.4" y="129.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c7">╺━┓</text>
 <text x="637.6" y="129.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│ │</text>
-<text x="704.8" y="129.4" textLength="92.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">╺━┓ ┏━╸ ╻ ╱</text>
+<text x="704.8" y="129.4" textLength="92.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">╻ ╻ ┏━┓ ╻ ╱</text>
 <text x="847.6" y="129.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│ │</text>
-<text x="881.2" y="129.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">╺┓  ╻ ╻ ┏━╸ ┏┳┓</text>
+<text x="881.2" y="129.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">╺━┓ ╺━┓ ┏━┓ ┏┳┓</text>
 <text x="1057.6" y="129.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│ │</text>
-<text x="1091.2" y="129.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">╺┓  ╺┓  ╺━┓ ┏┳┓</text>
+<text x="1091.2" y="129.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">╺━┓ ╻ ╻ ┏━╸ ┏┳┓</text>
 <text x="1267.6" y="129.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
 <text x="16" y="146.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
 <text x="108.4" y="146.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">┣━┫</text>
@@ -136,11 +199,11 @@
 <text x="427.6" y="146.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│ │</text>
 <text x="528.4" y="146.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c7">┏━┛</text>
 <text x="637.6" y="146.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│ │</text>
-<text x="704.8" y="146.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">╺━┫ ┗━┓  ╱</text>
+<text x="704.8" y="146.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">┗━┫ ┃ ┃  ╱</text>
 <text x="847.6" y="146.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│ │</text>
-<text x="889.6" y="146.4" textLength="117.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">┃  ┗━┫ ┣━┓ ┃╹┃</text>
+<text x="881.2" y="146.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">┏━┛   ┃ ┣━┫ ┃╹┃</text>
 <text x="1057.6" y="146.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│ │</text>
-<text x="1099.6" y="146.4" textLength="117.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">┃   ┃  ╺━┫ ┃╹┃</text>
+<text x="1091.2" y="146.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">┏━┛ ┗━┫ ┗━┓ ┃╹┃</text>
 <text x="1267.6" y="146.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
 <text x="16" y="163.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
 <text x="108.4" y="163.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c9">┗━┛</text>
@@ -149,12 +212,12 @@
 <text x="427.6" y="163.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│ │</text>
 <text x="528.4" y="163.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c11">┗━╸</text>
 <text x="637.6" y="163.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│ │</text>
-<text x="704.8" y="163.4" textLength="92.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c9">╺━┛ ╺━┛ ╱ ╹</text>
+<text x="721.6" y="163.4" textLength="75.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c9">╹ ┗━┛ ╱ ╹</text>
 <text x="847.6" y="163.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│ │</text>
-<text x="881.2" y="163.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c12">╺┻╸   ╹ ┗━┛ ╹ ╹</text>
+<text x="881.2" y="163.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c12">┗━╸   ╹ ┗━┛ ╹ ╹</text>
 <text x="1015.6" y="163.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">b/s</text>
 <text x="1057.6" y="163.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│ │</text>
-<text x="1091.2" y="163.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c13">╺┻╸ ╺┻╸ ╺━┛ ╹ ╹</text>
+<text x="1091.2" y="163.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c13">┗━╸   ╹ ╺━┛ ╹ ╹</text>
 <text x="1225.6" y="163.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">b/s</text>
 <text x="1267.6" y="163.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
 <text x="16" y="180.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">╰───────────────────────╯ ╰──────────────────────╯ ╰──────────────────────╯ ╰──────────────────────╯ ╰──────────────────────╯ ╰──────────────────────╯</text>
@@ -164,130 +227,243 @@
 <text x="1124.8" y="197.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">sort name · 9/9</text>
 <text x="1259.2" y="197.4" textLength="16.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">─╮</text>
 <text x="16" y="214.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│</text>
-<text x="58" y="214.4" textLength="1150.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1 b">NAME               HOST                STATUS      CPU  CPU 60s       RAM   DISK         RX         TX  NET 60s      LOAD     LAT  UPTIME</text>
+<text x="58" y="214.4" textLength="1150.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1 b">NAME           HOST             STATUS      CPU  CPU 60s           RAM   DISK         RX         TX  NET 60s         LOAD     LAT  UPTIME</text>
 <text x="1267.6" y="214.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│</text>
 <text x="16" y="231.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│</text>
 <text x="32.8" y="231.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4 b">●</text>
 <text x="58" y="231.4" textLength="92.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15 b">api-gateway</text>
-<text x="217.6" y="231.4" textLength="151.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3 b">api-gw.example.in…</text>
-<text x="385.6" y="231.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4 b">online      33%</text>
-<text x="646" y="231.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4 b">47%    37%</text>
-<text x="755.2" y="231.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8 b">23.7Mb/s</text>
-<text x="847.6" y="231.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0 b">22.0Mb/s</text>
-<text x="1040.8" y="231.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15 b">1.59</text>
+<text x="184" y="231.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3 b">api-gw.example…</text>
+<text x="326.8" y="231.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4 b">online      37%</text>
+<text x="620.8" y="231.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4 b">47%    37%</text>
+<text x="730" y="231.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8 b">42.7Mb/s</text>
+<text x="822.4" y="231.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0 b">39.8Mb/s</text>
+<text x="1040.8" y="231.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15 b">1.63</text>
 <text x="1099.6" y="231.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3 b">0.7ms  97d</text>
 <text x="1267.6" y="231.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│</text>
 <text x="16" y="248.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│</text>
 <text x="32.8" y="248.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c5">●</text>
 <text x="58" y="248.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15">backup-nas</text>
-<text x="217.6" y="248.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">192.0.2.50</text>
-<text x="385.6" y="248.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c5">offline</text>
-<text x="503.2" y="248.4" textLength="638.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">-  -               -      -          -          -  -               -       -</text>
+<text x="184" y="248.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">192.0.2.50</text>
+<text x="326.8" y="248.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c5">offline</text>
+<text x="444.4" y="248.4" textLength="697.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">-  -                   -      -          -          -  -                  -       -</text>
 <text x="1158.4" y="248.4" textLength="100.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c5">seen 52m ago</text>
 <text x="1267.6" y="248.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│</text>
 <text x="16" y="265.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│</text>
 <text x="32.8" y="265.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">●</text>
 <text x="58" y="265.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15">cache-01</text>
-<text x="217.6" y="265.4" textLength="109.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">192.168.40.21</text>
-<text x="385.6" y="265.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">online      14%</text>
-<text x="646" y="265.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">73%    23%</text>
-<text x="755.2" y="265.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">13.5Mb/s</text>
-<text x="847.6" y="265.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">16.5Mb/s</text>
-<text x="1040.8" y="265.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15">0.68</text>
+<text x="184" y="265.4" textLength="109.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">192.168.40.21</text>
+<text x="326.8" y="265.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">online      14%</text>
+<text x="620.8" y="265.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">73%    23%</text>
+<text x="730" y="265.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">23.5Mb/s</text>
+<text x="822.4" y="265.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">28.7Mb/s</text>
+<text x="1040.8" y="265.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15">0.69</text>
 <text x="1099.6" y="265.4" textLength="92.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">0.9ms  311d</text>
 <text x="1267.6" y="265.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│</text>
 <text x="16" y="282.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│</text>
 <text x="32.8" y="282.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c7">●</text>
 <text x="58" y="282.4" textLength="75.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15">ci-runner</text>
-<text x="217.6" y="282.4" textLength="151.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">ci-runner.example…</text>
-<text x="385.6" y="282.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c7">warn        87%</text>
-<text x="646" y="282.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">72%    74%</text>
-<text x="755.2" y="282.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">26.2Mb/s</text>
-<text x="856" y="282.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">2.9Mb/s</text>
-<text x="1032.4" y="282.4" textLength="42" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15">14.94</text>
+<text x="184" y="282.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">ci-runner.exam…</text>
+<text x="326.8" y="282.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c7">warn        90%</text>
+<text x="620.8" y="282.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">72%    74%</text>
+<text x="730" y="282.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">30.2Mb/s</text>
+<text x="830.8" y="282.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">3.5Mb/s</text>
+<text x="1032.4" y="282.4" textLength="42" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15">14.87</text>
 <text x="1108" y="282.4" textLength="92.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">43ms  2d 5h</text>
 <text x="1267.6" y="282.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│</text>
 <text x="16" y="299.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│</text>
 <text x="32.8" y="299.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">●</text>
 <text x="58" y="299.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15">db-primary</text>
-<text x="217.6" y="299.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">10.20.2.10</text>
-<text x="385.6" y="299.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">online      36%</text>
-<text x="646" y="299.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">74%    71%</text>
-<text x="755.2" y="299.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">21.1Mb/s</text>
-<text x="847.6" y="299.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">33.1Mb/s</text>
-<text x="1032.4" y="299.4" textLength="42" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15">15.59</text>
+<text x="184" y="299.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">10.20.2.10</text>
+<text x="326.8" y="299.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">online      44%</text>
+<text x="620.8" y="299.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">74%    71%</text>
+<text x="730" y="299.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">52.4Mb/s</text>
+<text x="822.4" y="299.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">82.3Mb/s</text>
+<text x="1032.4" y="299.4" textLength="42" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15">17.53</text>
 <text x="1099.6" y="299.4" textLength="92.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">0.5ms  203d</text>
 <text x="1267.6" y="299.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│</text>
 <text x="16" y="316.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│</text>
 <text x="32.8" y="316.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c5">●</text>
 <text x="58" y="316.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15">db-replica</text>
-<text x="217.6" y="316.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">10.20.2.11</text>
-<text x="385.6" y="316.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c5">crit</text>
-<text x="486.4" y="316.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">20%</text>
-<text x="646" y="316.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">71%</text>
-<text x="704.8" y="316.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c5">96%</text>
-<text x="755.2" y="316.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">45.0Mb/s</text>
-<text x="856" y="316.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">2.6Mb/s</text>
-<text x="1040.8" y="316.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15">4.02</text>
+<text x="184" y="316.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">10.20.2.11</text>
+<text x="326.8" y="316.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c5">crit</text>
+<text x="427.6" y="316.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">26%</text>
+<text x="620.8" y="316.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">71%</text>
+<text x="679.6" y="316.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c5">96%</text>
+<text x="730" y="316.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">89.1Mb/s</text>
+<text x="830.8" y="316.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">5.1Mb/s</text>
+<text x="1040.8" y="316.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15">4.78</text>
 <text x="1099.6" y="316.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">0.6ms  58d</text>
 <text x="1267.6" y="316.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│</text>
 <text x="16" y="333.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│</text>
 <text x="32.8" y="333.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">●</text>
 <text x="58" y="333.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15">web-01</text>
-<text x="217.6" y="333.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">10.20.1.11</text>
-<text x="385.6" y="333.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">online      26%</text>
-<text x="646" y="333.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">59%    61%</text>
-<text x="763.6" y="333.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">6.7Mb/s</text>
-<text x="847.6" y="333.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">17.0Mb/s</text>
-<text x="1040.8" y="333.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15">2.61</text>
+<text x="184" y="333.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">10.20.1.11</text>
+<text x="326.8" y="333.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">online      30%</text>
+<text x="620.8" y="333.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">59%    61%</text>
+<text x="730" y="333.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">15.1Mb/s</text>
+<text x="822.4" y="333.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">38.2Mb/s</text>
+<text x="1040.8" y="333.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15">2.83</text>
 <text x="1099.6" y="333.4" textLength="109.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">1.8ms  41d 3h</text>
 <text x="1267.6" y="333.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│</text>
 <text x="16" y="350.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│</text>
 <text x="32.8" y="350.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">●</text>
 <text x="58" y="350.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15">web-02</text>
-<text x="217.6" y="350.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">10.20.1.12</text>
-<text x="385.6" y="350.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">online      27%</text>
-<text x="646" y="350.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">50%    61%</text>
-<text x="763.6" y="350.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">6.5Mb/s</text>
-<text x="847.6" y="350.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">16.4Mb/s</text>
-<text x="1040.8" y="350.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15">2.55</text>
+<text x="184" y="350.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">10.20.1.12</text>
+<text x="326.8" y="350.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">online      33%</text>
+<text x="620.8" y="350.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">50%    61%</text>
+<text x="730" y="350.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">16.8Mb/s</text>
+<text x="822.4" y="350.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">42.4Mb/s</text>
+<text x="1040.8" y="350.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15">2.91</text>
 <text x="1099.6" y="350.4" textLength="109.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">2.1ms  12d 7h</text>
 <text x="1267.6" y="350.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│</text>
 <text x="16" y="367.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│</text>
 <text x="32.8" y="367.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">●</text>
 <text x="58" y="367.4" textLength="75.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15">worker-01</text>
-<text x="217.6" y="367.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">2001:db8:40::31</text>
-<text x="385.6" y="367.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">online      40%</text>
-<text x="646" y="367.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">64%    57%</text>
-<text x="763.6" y="367.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">3.8Mb/s</text>
-<text x="856" y="367.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">2.5Mb/s</text>
-<text x="1040.8" y="367.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15">5.99</text>
+<text x="184" y="367.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">2001:db8:40::31</text>
+<text x="326.8" y="367.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">online      47%</text>
+<text x="620.8" y="367.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">64%    57%</text>
+<text x="738.4" y="367.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">8.3Mb/s</text>
+<text x="830.8" y="367.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">5.5Mb/s</text>
+<text x="1040.8" y="367.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c15">6.46</text>
 <text x="1108" y="367.4" textLength="100.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">12ms  6d 19h</text>
 <text x="1267.6" y="367.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│</text>
-<text x="16" y="384.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│                                                                                                                                                    │</text>
-<text x="16" y="401.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│                                                                                                                                                    │</text>
-<text x="16" y="418.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│                                                                                                                                                    │</text>
-<text x="16" y="435.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│                                                                                                                                                    │</text>
-<text x="16" y="452.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│                                                                                                                                                    │</text>
-<text x="16" y="469.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│                                                                                                                                                    │</text>
-<text x="16" y="486.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│                                                                                                                                                    │</text>
-<text x="16" y="503.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│                                                                                                                                                    │</text>
-<text x="16" y="520.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│                                                                                                                                                    │</text>
-<text x="16" y="537.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│                                                                                                                                                    │</text>
-<text x="16" y="554.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│                                                                                                                                                    │</text>
-<text x="16" y="571.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│                                                                                                                                                    │</text>
-<text x="16" y="588.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│                                                                                                                                                    │</text>
-<text x="16" y="605.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│                                                                                                                                                    │</text>
-<text x="16" y="622.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│                                                                                                                                                    │</text>
-<text x="16" y="639.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│                                                                                                                                                    │</text>
-<text x="16" y="656.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│                                                                                                                                                    │</text>
-<text x="16" y="673.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│                                                                                                                                                    │</text>
-<text x="16" y="690.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│                                                                                                                                                    │</text>
-<text x="16" y="707.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│                                                                                                                                                    │</text>
-<text x="16" y="724.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│                                                                                                                                                    │</text>
-<text x="16" y="741.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│                                                                                                                                                    │</text>
-<text x="16" y="758.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">│                                                                                                                                                    │</text>
-<text x="16" y="775.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯</text>
+<text x="16" y="384.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c14">╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯</text>
+<text x="16" y="401.4" textLength="16.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">╭─</text>
+<text x="41.2" y="401.4" textLength="75.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3 b">Fleet CPU</text>
+<text x="125.2" y="401.4" textLength="336" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">────────────────────────────────────────</text>
+<text x="469.6" y="401.4" textLength="151.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">avg 40% · 8 online</text>
+<text x="629.2" y="401.4" textLength="42" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">─╮ ╭─</text>
+<text x="679.6" y="401.4" textLength="109.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3 b">Fleet network</text>
+<text x="797.2" y="401.4" textLength="277.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">─────────────────────────────────</text>
+<text x="1082.8" y="401.4" textLength="168" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">↓ 278Mb/s  ↑ 245Mb/s</text>
+<text x="1259.2" y="401.4" textLength="16.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">─╮</text>
+<text x="16" y="418.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="32.8" y="418.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">100%</text>
+<text x="74.8" y="418.4" textLength="588" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ │ │</text>
+<text x="671.2" y="418.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">500Mb/s</text>
+<text x="738.4" y="418.4" textLength="537.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ │</text>
+<text x="16" y="435.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│                                                                         │ │                                                                        │</text>
+<text x="16" y="452.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│                                                                         │ │                                                                        │</text>
+<text x="16" y="469.4" textLength="646.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│                                                                         │ │</text>
+<text x="1032.4" y="469.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">⣷</text>
+<text x="1267.6" y="469.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="16" y="486.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="32.8" y="486.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">80%</text>
+<text x="74.8" y="486.4" textLength="588" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ │ │</text>
+<text x="671.2" y="486.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">400Mb/s</text>
+<text x="738.4" y="486.4" textLength="294" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈</text>
+<text x="1032.4" y="486.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">⡏</text>
+<text x="1040.8" y="486.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">⡆</text>
+<text x="1049.2" y="486.4" textLength="226.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ │</text>
+<text x="16" y="503.4" textLength="646.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│                                                                         │ │</text>
+<text x="856" y="503.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">⡀</text>
+<text x="1032.4" y="503.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">⣧</text>
+<text x="1040.8" y="503.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">⢱</text>
+<text x="1267.6" y="503.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="16" y="520.4" textLength="646.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│                                                                         │ │</text>
+<text x="856" y="520.4" textLength="176.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">⡿⡀                  ⢸</text>
+<text x="1032.4" y="520.4" textLength="16.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">⡿⡀</text>
+<text x="1049.2" y="520.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">⡇ ⡄</text>
+<text x="1267.6" y="520.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="16" y="537.4" textLength="646.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│                                                                         │ │</text>
+<text x="856" y="537.4" textLength="168" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">⡇⢣                 ⡄</text>
+<text x="1024" y="537.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">⢸⠇⠙⡼</text>
+<text x="1057.6" y="537.4" textLength="184.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">⠲⢱      ⡶⣠⡀⡀         ⡀</text>
+<text x="1267.6" y="537.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="16" y="554.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="32.8" y="554.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">60%</text>
+<text x="74.8" y="554.4" textLength="588" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ │ │</text>
+<text x="671.2" y="554.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">300Mb/s</text>
+<text x="738.4" y="554.4" textLength="109.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">┈┈┈┈┈┈┈┈┈┈┈┈┈</text>
+<text x="847.6" y="554.4" textLength="42" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">⢀⠇⠈⠒⢆</text>
+<text x="889.6" y="554.4" textLength="117.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">┈┈┈┈┈┈┈┈┈┈┈┈┈┈</text>
+<text x="1007.2" y="554.4" textLength="16.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">⢠⠻</text>
+<text x="1024" y="554.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">⣸</text>
+<text x="1032.4" y="554.4" textLength="16.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">┈┈</text>
+<text x="1049.2" y="554.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">⠱⣀⡎</text>
+<text x="1074.4" y="554.4" textLength="100.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">⢣⢀⢄⢀⢀⢀⠇⠃⠘⢱⢀⢄</text>
+<text x="1175.2" y="554.4" textLength="16.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">┈┈</text>
+<text x="1192" y="554.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">⡀</text>
+<text x="1200.4" y="554.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">┈┈┈┈</text>
+<text x="1234" y="554.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">⡟⠔⣄</text>
+<text x="1267.6" y="554.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="16" y="571.4" textLength="646.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│                                                                         │ │</text>
+<text x="847.6" y="571.4" textLength="168" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">⢸   ⠈⢢ ⡀ ⢠⡀    ⡀  ⢀⡸</text>
+<text x="1024" y="571.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">⢹   ⠈⠸⢏⢁</text>
+<text x="1091.2" y="571.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">⠈⠁⠋⢻</text>
+<text x="1124.8" y="571.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">⡞⡼⢆⣄⢁⢦</text>
+<text x="1175.2" y="571.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">⠑⠒⠱</text>
+<text x="1200.4" y="571.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">⢜</text>
+<text x="1208.8" y="571.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">⠢⠳⢼</text>
+<text x="1234" y="571.4" textLength="16.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">⡀⣀</text>
+<text x="1267.6" y="571.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="16" y="588.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="637.6" y="588.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│ │</text>
+<text x="738.4" y="588.4" textLength="268.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">⢄⢠⢀          ⢸     ⠉⠈⠢⡎⠉⠉⢢⢄⣤⢳⡰⡴⡜</text>
+<text x="1007.2" y="588.4" textLength="252" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">⢁⢧⡼     ⠸⠃⠑⠒⠉⢶⠁⠁⠈⠈⠎ ⠣⠳⠓⠎⠱⠓⢣⠳⠁⠋</text>
+<text x="1267.6" y="588.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="16" y="605.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="637.6" y="605.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│ │</text>
+<text x="746.8" y="605.4" textLength="109.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">⠁⠋⡦⠲⡰⡄⢠⠳⡰⢤⠳⠤⠚</text>
+<text x="906.4" y="605.4" textLength="42" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">⢀ ⡸⠢⢢</text>
+<text x="956.8" y="605.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">⠈</text>
+<text x="965.2" y="605.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">⡈⣦⢡⣀⡰⠜⠈</text>
+<text x="1267.6" y="605.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="16" y="622.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="32.8" y="622.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">40%</text>
+<text x="637.6" y="622.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│ │</text>
+<text x="671.2" y="622.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">200Mb/s</text>
+<text x="738.4" y="622.4" textLength="42" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">⠱⡠⠤⢄⢀</text>
+<text x="780.4" y="622.4" textLength="16.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">⠁⠘</text>
+<text x="797.2" y="622.4" textLength="134.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">⢁⡀⡡⡀⡄⣄⡠⣀⢄⣀⢦⠦⠒⠊⢣⠃</text>
+<text x="931.6" y="622.4" textLength="16.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">┈┈</text>
+<text x="948.4" y="622.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">⠋⠉⠘</text>
+<text x="973.6" y="622.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">┈</text>
+<text x="982" y="622.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">⠁⠁⠁</text>
+<text x="1007.2" y="622.4" textLength="268.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ │</text>
+<text x="16" y="639.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="637.6" y="639.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│ │</text>
+<text x="763.6" y="639.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">⠈⠁⠓⠉⠊⠈ ⠈⠘⠈</text>
+<text x="1267.6" y="639.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="16" y="656.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="637.6" y="656.4" textLength="638.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│ │                                                                        │</text>
+<text x="16" y="673.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="637.6" y="673.4" textLength="638.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│ │                                                                        │</text>
+<text x="16" y="690.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="32.8" y="690.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">20%</text>
+<text x="637.6" y="690.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│ │</text>
+<text x="671.2" y="690.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">100Mb/s</text>
+<text x="738.4" y="690.4" textLength="537.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ │</text>
+<text x="16" y="707.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="637.6" y="707.4" textLength="638.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│ │                                                                        │</text>
+<text x="16" y="724.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="637.6" y="724.4" textLength="638.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│ │                                                                        │</text>
+<text x="16" y="741.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="637.6" y="741.4" textLength="638.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│ │                                                                        │</text>
+<text x="16" y="758.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="32.8" y="758.4" textLength="16.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">0%</text>
+<text x="74.8" y="758.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">───</text>
+<text x="108.4" y="758.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">-60s</text>
+<text x="150.4" y="758.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">────</text>
+<text x="192.4" y="758.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">-50s</text>
+<text x="234.4" y="758.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">────</text>
+<text x="276.4" y="758.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">-40s</text>
+<text x="318.4" y="758.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">────</text>
+<text x="360.4" y="758.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">-30s</text>
+<text x="402.4" y="758.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">────</text>
+<text x="444.4" y="758.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">-20s</text>
+<text x="486.4" y="758.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">────</text>
+<text x="528.4" y="758.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">-10s</text>
+<text x="570.4" y="758.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">───</text>
+<text x="604" y="758.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">now</text>
+<text x="637.6" y="758.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│ │</text>
+<text x="671.2" y="758.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">0b/s</text>
+<text x="738.4" y="758.4" textLength="243.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">─────────────────────────────</text>
+<text x="990.4" y="758.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">-1m</text>
+<text x="1024" y="758.4" textLength="201.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">────────────────────────</text>
+<text x="1234" y="758.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">now</text>
+<text x="1267.6" y="758.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">│</text>
+<text x="16" y="775.4" textLength="1260" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">╰─────────────────────────────────────────────────────────────────────────╯ ╰────────────────────────────────────────────────────────────────────────╯</text>
 <text x="24.4" y="792.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0 b">j/k</text>
 <text x="58" y="792.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">move</text>
 <text x="100" y="792.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">·</text>
@@ -323,7 +499,7 @@
 <text x="1099.6" y="792.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">·</text>
 <text x="1116.4" y="792.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0 b">q</text>
 <text x="1133.2" y="792.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">quit</text>
-<text x="1200.4" y="792.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">05:06:07</text>
+<text x="1200.4" y="792.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">05:30:39</text>
 </g>
 <rect x=".5" y=".5" width="1291" height="811" rx="9.5" fill="none" stroke="#262a31"/>
 </svg>

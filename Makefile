@@ -46,7 +46,10 @@ screenshots: build ## Render every tab to $(SHOTS)/<tab>-<size>.svg
 	mkdir -p $(SHOTS)
 	for tab in $(TABS); do $(RENDER) --size $(SIZE) --tab $$tab --out $(SHOTS)/$$tab-$(SIZE).svg; done
 	$(RENDER) --size 80x24 --tab overview --out $(SHOTS)/overview-80x24.svg
+	$(RENDER) --size 80x24 --tab detail --out $(SHOTS)/detail-80x24.svg
+	$(RENDER) --size 220x60 --tab overview --out $(SHOTS)/overview-220x60.svg
 	$(RENDER) --size 220x60 --tab detail --out $(SHOTS)/detail-220x60.svg
+	$(RENDER) --size $(SIZE) --tab overview --compat ascii --out $(SHOTS)/overview-$(SIZE)-ascii.svg
 
 cross: ## Check that linux, darwin and windows builds compile
 	GOOS=linux   GOARCH=amd64 $(GO) build -o /dev/null ./...
