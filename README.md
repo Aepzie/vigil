@@ -73,12 +73,14 @@ This runs the dashboard in your terminal with a synthetic fleet. To try
 the SSH experience, serve the demo instead:
 
 ```bash
-vigil demo --serve --public     # anyone may log in; synthetic data, no shells
+vigil demo --serve --public     # anyone may log in; read-only, synthetic data, no shells
 ssh localhost -p 2222
 ```
 
-Without `--public`, `vigil demo --serve` checks logins against the data
-directory just like `vigil serve`.
+Public demo sessions are read-only: servers and settings cannot be
+changed, and the demo inventory is capped at 50 servers. Without
+`--public`, `vigil demo --serve` checks logins against the data directory
+just like `vigil serve`.
 
 ### Run the manager
 
@@ -90,7 +92,7 @@ On the first start, when no users or keys exist, vigil creates the
 dashboard user `admin` with a random 20-character password and prints it
 **once**, followed by the manager's public key:
 
-```
+```text
 +---------------------------------------------------+
 | vigil first start: created dashboard user "admin" |
 |                                                   |
@@ -105,6 +107,11 @@ Install the manager key on every monitored server (~/.ssh/authorized_keys):
 
 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA... vigil@manager
 ```
+
+When stdout is not a terminal (systemd, Docker), the password is **not**
+printed, so it never lands in the journal or container logs. vigil writes
+it to `<data>/initial-admin-password` (mode `0600`) instead and prints only
+that path: read it, change the password, then delete the file.
 
 `vigil serve` flags:
 
@@ -143,7 +150,11 @@ ssh admin@manager -p 2222
 ```
 
 Open the **Servers** tab (`2`), press `a` and fill in name, host, port,
-user, an optional private key path (default: the manager key) and tags.
+user, an optional SSH key and tags. The key defaults to the manager key;
+to use a different one, copy the unencrypted private key into
+`<data>/keys/` (mode `0600`, owned by the vigil user) and enter its file
+name, e.g. `deploy_ed25519`. Paths outside that directory are rejected, so
+dashboard users cannot make vigil use arbitrary key files.
 `t` tests the connection. The first connection to a server records its
 host key (trust on first use).
 
@@ -211,6 +222,8 @@ Detail:
 | Key | Action |
 | --- | --- |
 | `[` / `]` | previous / next server |
+| `w` | chart window: 1m, 5m, 15m |
+| `c` | next chart, when only one chart fits |
 | `enter` | open a shell on the server |
 | `r` | poll the server now |
 
@@ -242,15 +255,23 @@ directory is created with mode `0700`.
 
 | File | Contents |
 | --- | --- |
-| `servers.json` | monitored servers: name, host, port, user, optional `key_path`, tags |
+| `servers.json` | monitored servers: name, host, port, user, optional `key_path` (a file name in `keys/`), tags |
 | `settings.json` | manager settings (below) |
 | `users.json` | dashboard users with bcrypt password hashes |
 | `authorized_keys` | OpenSSH public keys allowed to log in to the dashboard |
 | `host_ed25519` | the dashboard's SSH host key, generated on first start |
 | `id_ed25519` (`.pub`) | the manager key used to log in to monitored servers |
 | `known_hosts` | host keys of monitored servers, recorded on first connection |
+| `keys/` | optional per-server private keys (directory `0700`, keys `0600`) |
+| `initial-admin-password` | first-start password when stdout is not a terminal; delete after reading |
 
-JSON files are written atomically with mode `0600`. `users.json` and
+JSON files are written atomically with mode `0600`. On Unix, vigil
+checks ownership and modes like OpenSSH's `StrictModes`: the data
+directory must belong to the vigil user (it is tightened to `0700` if
+looser), `users.json`, `id_ed25519`, the host key and every key in `keys/`
+must not be accessible by group or others, and `authorized_keys` must not
+be writable by them. Files that fail the check are refused with a message
+that says how to fix them. `users.json` and
 `authorized_keys` are re-read when they change, `known_hosts` too, so you
 can delete a stale line after reinstalling a server without restarting
 vigil.
@@ -301,12 +322,16 @@ poll interval:
    does not matter.
 
 The script prints `/proc/stat`, `/proc/meminfo`, `/proc/loadavg`,
-`/proc/uptime`, `/proc/net/dev`, `df -kPT`, `uname -sr`, `os-release`,
-the hostname, page size and clock tick rate, process owners, user names
-from `/etc/passwd` and every `/proc/<pid>/stat`, separated by marker lines
-that carry a random per-poll nonce so remote content cannot forge a
-section. Output is capped at 4 MiB and each poll times out after twice
-the interval (5s to 15s).
+`/proc/uptime`, `/proc/net/dev`, `df` for **local** filesystems (network
+mounts such as NFS are skipped so a hung mount cannot stall a poll; `df`
+runs under a 3s `timeout`), `uname -sr`, `os-release`, the hostname, page
+size and clock tick rate, user names from `/etc/passwd`, and one record
+per process built from `/proc/<pid>/stat` with the PID taken from the
+directory name, so a crafted process name cannot forge or hide entries.
+Sections are separated by marker lines that carry a random per-poll nonce.
+Per-process data is capped at 32768 records (the rest is skipped, not
+treated as an error), all other output at 4 MiB, and each poll times out
+after twice the interval (5s to 15s).
 
 CPU, network and per-process figures are deltas between two polls.
 Network rates cover all interfaces except loopback and container/VM
@@ -323,15 +348,22 @@ like SSH access to those servers. In short:
   `<data>/known_hosts` on the first connection and refuses a changed key
   afterwards. Verify the dashboard's own host key
   (`ssh-keygen -lf <data>/host_ed25519.pub`) the first time you connect.
-- **Passwords** are stored as bcrypt hashes (cost 12); logins for unknown
-  users take the same time as for known ones.
+- **Passwords** are stored as bcrypt hashes (cost 12, weaker hashes are
+  upgraded on the next login); logins for unknown users take the same time
+  as for known ones.
+- **Per-server keys** can only be files inside `<data>/keys/`; symlinks
+  leaving that directory are refused and key errors never reveal whether a
+  file exists.
 - **Key permissions.** Secret files are written with `0600` in a `0700`
-  directory, and a too permissive host key is tightened to `0600` at
-  startup.
+  directory, and ownership and modes are verified at startup and on
+  reload (see [Configuration](#configuration)).
 - **Rate limiting.** Failed password attempts are delayed and limited
-  per client IP (10 failures per 5 minutes block password logins from
-  that IP), new sessions are rate limited per IP, and concurrent sessions
-  are capped.
+  per client (an IPv4 address or an IPv6 /64; 10 failures per 5 minutes
+  block password logins from that client), with a global budget of 200
+  failures per minute. Concurrent bcrypt checks are bounded, connections
+  that have not authenticated yet are capped at 8 per client and 256 in
+  total, new sessions are rate limited per IP, and concurrent sessions are
+  capped.
 - **Sanitized output.** Everything read from monitored servers or SSH
   clients is stripped of control characters and escape sequences before
   it is rendered or logged.

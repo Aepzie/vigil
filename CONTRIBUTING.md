@@ -23,11 +23,16 @@ Without `make`, the equivalents are `go test ./...`, `go vet ./...`,
 
 ## Branches
 
-Branch off `main` and name the branch after the kind of change:
+`main` holds released code and `develop` is the integration branch.
+Branch off `develop` and name the branch after the kind of change:
 
 - `feature/<short-name>` for new functionality, e.g. `feature/disk-alerts`
 - `fix/<short-name>` for bug fixes, e.g. `fix/resize-during-shell`
 - `docs/<short-name>` for documentation only
+- `chore/<short-name>` for maintenance (dependencies, tooling)
+
+Branches are merged into `develop` with `--no-ff`; `develop` is merged
+into `main` for a release.
 
 Keep branches focused; several small pull requests are easier to review
 than one large one.
@@ -57,7 +62,7 @@ explain the migration in the body.
 
 ## Pull requests
 
-Before opening a pull request:
+Before opening a pull request against `develop`:
 
 1. `make lint test` passes (CI also runs on Windows and macOS, and with
    the race detector on Linux).

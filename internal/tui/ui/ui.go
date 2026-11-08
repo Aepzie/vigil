@@ -84,7 +84,8 @@ type Screen interface {
 	// Title is the tab label, e.g. "Overview".
 	Title() string
 	// Icon is a single glyph from common terminal fonts (no emoji),
-	// e.g. "◉", "≡", "⚡".
+	// e.g. "◉", "≡", "▲". Avoid emoji-presentation glyphs such as "⚡":
+	// they are double width in most terminals.
 	Icon() string
 	Init() tea.Cmd
 	// Update receives FleetMsg broadcasts, key presses while the screen
