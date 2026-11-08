@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="704" height="472" viewBox="0 0 704 472" role="img" aria-label="vigil — overview">
+<title>vigil — overview</title>
+<style>.t{font-family:"JetBrains Mono","Cascadia Mono","DejaVu Sans Mono",Menlo,Consolas,monospace;font-size:14px}.b{font-weight:700}.i{font-style:italic}.f{opacity:.6}.u{text-decoration:underline}.s{text-decoration:line-through}.u.s{text-decoration:underline line-through}.c0{fill:#a78bfa}.c1{fill:#5a6069}.c2{fill:#262a31}.c3{fill:#9aa1ab}.c4{fill:#34d399}.c5{fill:#f87171}.c6{fill:#0a0b0d}.c7{fill:#e8eaed}.c8{fill:#fbbf24}.c9{fill:#22d3ee}.c10{fill:#8b5cf6}</style>
+<rect width="704" height="472" rx="10" fill="#0a0b0d"/>
+<path d="M0 32 V10 A10 10 0 0 1 10 0 H694 A10 10 0 0 1 704 10 V32 Z" fill="#111316"/>
+<rect y="32" width="704" height="1" fill="#262a31"/>
+<circle cx="18" cy="16" r="6" fill="#262a31" stroke="#5a6069"/>
+<circle cx="38" cy="16" r="6" fill="#262a31" stroke="#5a6069"/>
+<circle cx="58" cy="16" r="6" fill="#262a31" stroke="#5a6069"/>
+<text x="352" y="20" text-anchor="middle" font-family='"JetBrains Mono","Cascadia Mono","DejaVu Sans Mono",Menlo,Consolas,monospace' font-size="13" fill="#9aa1ab">vigil — overview</text>
+<g shape-rendering="crispEdges">
+<rect x="620.8" y="48" width="58.8" height="17" fill="#f87171"/>
+<rect x="24.4" y="65" width="117.6" height="17" fill="#a78bfa"/>
+<rect x="32.8" y="167" width="638.4" height="17" fill="#181b20"/>
+</g>
+<g class="t">
+<text x="24.4" y="61.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0 b">◆ vigil</text>
+<text x="91.6" y="61.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">3dfe03d</text>
+<text x="158.8" y="61.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">·</text>
+<text x="175.6" y="61.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">up 2d 4h</text>
+<text x="251.2" y="61.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">·</text>
+<text x="268" y="61.4" textLength="92.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">admin@vigil</text>
+<text x="394" y="61.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">●</text>
+<text x="410.8" y="61.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">8 online</text>
+<text x="486.4" y="61.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">·</text>
+<text x="503.2" y="61.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c5">●</text>
+<text x="520" y="61.4" textLength="75.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">1 offline</text>
+<text x="629.2" y="61.4" textLength="42" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c6 b">ALARM</text>
+<text x="32.8" y="78.4" textLength="100.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c6 b">1 ◉ Overview</text>
+<text x="150.4" y="78.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">2</text>
+<text x="167.2" y="78.4" textLength="75.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">≡ Servers</text>
+<text x="259.6" y="78.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">3</text>
+<text x="276.4" y="78.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">◈ Detail</text>
+<text x="360.4" y="78.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">4</text>
+<text x="377.2" y="78.4" textLength="16.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">⚡</text>
+<text x="402.4" y="78.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">Alerts</text>
+<text x="461.2" y="78.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c5 b">3</text>
+<text x="486.4" y="78.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">5</text>
+<text x="503.2" y="78.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">✱ Settings</text>
+<text x="16" y="95.4" textLength="672" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">────────────────────────────────────────────────────────────────────────────────</text>
+<text x="24.4" y="112.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">●</text>
+<text x="41.2" y="112.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c7 b">8</text>
+<text x="58" y="112.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">online</text>
+<text x="133.6" y="112.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c5">●</text>
+<text x="150.4" y="112.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c7 b">1</text>
+<text x="167.2" y="112.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">offline</text>
+<text x="251.2" y="112.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">▲</text>
+<text x="268" y="112.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c7 b">2</text>
+<text x="284.8" y="112.4" textLength="159.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">warn        cpu avg</text>
+<text x="452.8" y="112.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">35%</text>
+<text x="511.6" y="112.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c9">↓</text>
+<text x="528.4" y="112.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c7">146Mb/s</text>
+<text x="604" y="112.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">↑</text>
+<text x="620.8" y="112.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c7">113Mb/s</text>
+<text x="16" y="146.4" textLength="16.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">╭─</text>
+<text x="41.2" y="146.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0 b">Servers</text>
+<text x="108.4" y="146.4" textLength="420" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">──────────────────────────────────────────────────</text>
+<text x="536.8" y="146.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">sort name · 9/9</text>
+<text x="671.2" y="146.4" textLength="16.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">─╮</text>
+<text x="16" y="163.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│</text>
+<text x="58" y="163.4" textLength="613.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1 b">NAME          STATUS      CPU    RAM   DISK         RX         TX     LAT</text>
+<text x="679.6" y="163.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│</text>
+<text x="16" y="180.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│</text>
+<text x="32.8" y="180.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4 b">●</text>
+<text x="58" y="180.4" textLength="92.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c7 b">api-gateway</text>
+<text x="175.6" y="180.4" textLength="243.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4 b">online      33%    47%    37%</text>
+<text x="444.4" y="180.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c9 b">23.6Mb/s</text>
+<text x="536.8" y="180.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0 b">21.9Mb/s</text>
+<text x="629.2" y="180.4" textLength="42" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3 b">0.7ms</text>
+<text x="679.6" y="180.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│</text>
+<text x="16" y="197.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│</text>
+<text x="32.8" y="197.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c5">●</text>
+<text x="58" y="197.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c7">backup-nas</text>
+<text x="175.6" y="197.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c5">offline</text>
+<text x="293.2" y="197.4" textLength="378" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">-      -      -          -          -       -</text>
+<text x="679.6" y="197.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│</text>
+<text x="16" y="214.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│</text>
+<text x="32.8" y="214.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">●</text>
+<text x="58" y="214.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c7">cache-01</text>
+<text x="175.6" y="214.4" textLength="243.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">online      14%    73%    23%</text>
+<text x="444.4" y="214.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c9">13.5Mb/s</text>
+<text x="536.8" y="214.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">16.5Mb/s</text>
+<text x="629.2" y="214.4" textLength="42" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">0.9ms</text>
+<text x="679.6" y="214.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│</text>
+<text x="16" y="231.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│</text>
+<text x="32.8" y="231.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">●</text>
+<text x="58" y="231.4" textLength="75.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c7">ci-runner</text>
+<text x="175.6" y="231.4" textLength="126" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c8">warn        87%</text>
+<text x="335.2" y="231.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">72%    74%</text>
+<text x="444.4" y="231.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c9">26.1Mb/s</text>
+<text x="545.2" y="231.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">2.9Mb/s</text>
+<text x="637.6" y="231.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">43ms</text>
+<text x="679.6" y="231.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│</text>
+<text x="16" y="248.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│</text>
+<text x="32.8" y="248.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">●</text>
+<text x="58" y="248.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c7">db-primary</text>
+<text x="175.6" y="248.4" textLength="243.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">online      36%    74%    71%</text>
+<text x="444.4" y="248.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c9">21.0Mb/s</text>
+<text x="536.8" y="248.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">33.0Mb/s</text>
+<text x="629.2" y="248.4" textLength="42" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">0.5ms</text>
+<text x="679.6" y="248.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│</text>
+<text x="16" y="265.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│</text>
+<text x="32.8" y="265.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c5">●</text>
+<text x="58" y="265.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c7">db-replica</text>
+<text x="175.6" y="265.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c5">crit</text>
+<text x="276.4" y="265.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">20%    71%</text>
+<text x="394" y="265.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c5">96%</text>
+<text x="444.4" y="265.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c9">45.2Mb/s</text>
+<text x="545.2" y="265.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">2.6Mb/s</text>
+<text x="629.2" y="265.4" textLength="42" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">0.6ms</text>
+<text x="679.6" y="265.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│</text>
+<text x="16" y="282.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│</text>
+<text x="32.8" y="282.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">●</text>
+<text x="58" y="282.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c7">web-01</text>
+<text x="175.6" y="282.4" textLength="243.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">online      26%    59%    61%</text>
+<text x="452.8" y="282.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c9">6.7Mb/s</text>
+<text x="536.8" y="282.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">16.9Mb/s</text>
+<text x="629.2" y="282.4" textLength="42" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">1.8ms</text>
+<text x="679.6" y="282.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│</text>
+<text x="16" y="299.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│</text>
+<text x="32.8" y="299.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">●</text>
+<text x="58" y="299.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c7">web-02</text>
+<text x="175.6" y="299.4" textLength="243.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">online      27%    50%    61%</text>
+<text x="452.8" y="299.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c9">6.5Mb/s</text>
+<text x="536.8" y="299.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">16.5Mb/s</text>
+<text x="629.2" y="299.4" textLength="42" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">2.1ms</text>
+<text x="679.6" y="299.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│</text>
+<text x="16" y="316.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│</text>
+<text x="32.8" y="316.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">●</text>
+<text x="58" y="316.4" textLength="75.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c7">worker-01</text>
+<text x="175.6" y="316.4" textLength="243.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c4">online      40%    64%    57%</text>
+<text x="452.8" y="316.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c9">3.8Mb/s</text>
+<text x="545.2" y="316.4" textLength="58.8" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0">2.5Mb/s</text>
+<text x="637.6" y="316.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">12ms</text>
+<text x="679.6" y="316.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│</text>
+<text x="16" y="333.4" textLength="672" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│                                                                              │</text>
+<text x="16" y="350.4" textLength="672" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│                                                                              │</text>
+<text x="16" y="367.4" textLength="672" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│                                                                              │</text>
+<text x="16" y="384.4" textLength="672" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│                                                                              │</text>
+<text x="16" y="401.4" textLength="672" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│                                                                              │</text>
+<text x="16" y="418.4" textLength="672" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">│                                                                              │</text>
+<text x="16" y="435.4" textLength="672" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c10">╰──────────────────────────────────────────────────────────────────────────────╯</text>
+<text x="24.4" y="452.4" textLength="25.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0 b">j/k</text>
+<text x="58" y="452.4" textLength="33.6" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">move</text>
+<text x="100" y="452.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">·</text>
+<text x="116.8" y="452.4" textLength="42" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0 b">enter</text>
+<text x="167.2" y="452.4" textLength="42" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">shell</text>
+<text x="217.6" y="452.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">·</text>
+<text x="234.4" y="452.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0 b">d</text>
+<text x="251.2" y="452.4" textLength="50.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">detail</text>
+<text x="310" y="452.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">·</text>
+<text x="326.8" y="452.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0 b">v</text>
+<text x="343.6" y="452.4" textLength="84" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">tiles/list</text>
+<text x="436" y="452.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c2">·</text>
+<text x="452.8" y="452.4" textLength="8.4" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c0 b">s</text>
+<text x="469.6" y="452.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c1">sort cpu</text>
+<text x="612.4" y="452.4" textLength="67.2" lengthAdjust="spacingAndGlyphs" xml:space="preserve" class="c3">05:06:08</text>
+</g>
+<rect x=".5" y=".5" width="703" height="471" rx="9.5" fill="none" stroke="#262a31"/>
+</svg>
