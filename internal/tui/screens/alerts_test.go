@@ -1,10 +1,117 @@
 package screens
 
 import (
+	"slices"
+	"strings"
 	"testing"
+	"time"
 
+	"github.com/charmbracelet/x/ansi"
+
+	"github.com/CraguS/vigil/internal/alerts"
 	"github.com/CraguS/vigil/internal/tui/ui"
 )
+
+// alertsFleet adds an active disk alert with a mount subject to fakeFleet.
+func alertsFleet() ui.Fleet {
+	f := fakeFleet()
+	f.Active = append(slices.Clone(f.Active), alerts.Alert{
+		ID: "a3", ServerID: "s1", ServerName: "web-01", Kind: alerts.KindDisk, Subject: "/data",
+		Severity: alerts.SeverityWarn, Message: "Disk /data 91% ≥ 90%", Value: 91, Threshold: 90,
+		Since: testNow.Add(-time.Minute),
+	})
+	return f
+}
+
+// headerCells returns the column titles of the first table header line
+// that contains SEV.
+func headerCells(t *testing.T, view string) []string {
+	t.Helper()
+	for _, l := range strings.Split(ansi.Strip(view), "\n") {
+		if strings.Contains(l, "SEV") {
+			return strings.Fields(strings.Trim(l, "│ "))
+		}
+	}
+	t.Fatalf("no table header in:\n%s", ansi.Strip(view))
+	return nil
+}
+
+func TestAlertsColumnsByWidth(t *testing.T) {
+	tests := []struct {
+		width int
+		want  []string
+	}{
+		{150, []string{"SEV", "SERVER", "KIND", "MESSAGE", "VALUE", "SINCE", "ACK"}},
+		{80, []string{"SEV", "SERVER", "KIND", "MESSAGE", "SINCE", "ACK"}},
+		{60, []string{"SEV", "SERVER", "MESSAGE"}},
+	}
+	for _, tt := range tests {
+		s := newAlerts(testDeps(t))
+		s.Update(ui.FleetMsg{Fleet: alertsFleet()})
+		view := s.View(tt.width, 21)
+		checkSize(t, view, tt.width, 21)
+		if got := headerCells(t, view); !slices.Equal(got, tt.want) {
+			t.Errorf("width %d: columns %v, want %v", tt.width, got, tt.want)
+		}
+	}
+}
+
+func TestAlertsTableAt80(t *testing.T) {
+	s := newAlerts(testDeps(t))
+	s.Update(ui.FleetMsg{Fleet: alertsFleet()})
+	plain := ansi.Strip(s.View(80, 21))
+	for _, want := range []string{"unreachable: connection refused", "Disk /data 91% ≥ 90%", "CPU at 97% for 2m"} {
+		if !strings.Contains(plain, want) {
+			t.Errorf("message %q truncated:\n%s", want, plain)
+		}
+	}
+	if strings.Contains(plain, "disk /data") {
+		t.Errorf("KIND repeats the subject:\n%s", plain)
+	}
+	if !strings.Contains(plain, " disk ") {
+		t.Errorf("KIND missing:\n%s", plain)
+	}
+}
+
+func TestAlertsRecentResolvedTable(t *testing.T) {
+	for _, size := range [][2]int{{80, 21}, {150, 41}} {
+		s := newTestAlerts(t)
+		view := s.View(size[0], size[1])
+		checkSize(t, view, size[0], size[1])
+		plain := ansi.Strip(view)
+		for _, want := range []string{"Recent / resolved", "RESOLVED", "LASTED", "disk / at 86%", "50m ago", "10m"} {
+			if !strings.Contains(plain, want) {
+				t.Errorf("%dx%d: resolved table lacks %q:\n%s", size[0], size[1], want, plain)
+			}
+		}
+		if strings.Contains(plain, "Nothing resolved recently") {
+			t.Errorf("%dx%d: resolved alert shown as empty", size[0], size[1])
+		}
+	}
+}
+
+func TestAlertValue(t *testing.T) {
+	tests := []struct {
+		value, threshold float64
+		want             string
+	}{
+		{93.4, 80, "93% ≥ 80%"},
+		{80, 80, "80% ≥ 80%"},
+		{77.2, 80, "77% < 80%"},
+		{79.6, 80, "79% < 80%"},
+		{85.58, 85.5, "85.5% ≥ 85.5%"},
+		{85.46, 85.5, "85.4% < 85.5%"},
+	}
+	for _, tt := range tests {
+		a := alerts.Alert{Kind: alerts.KindCPU, Value: tt.value, Threshold: tt.threshold}
+		if got := alertValue(a); got != tt.want {
+			t.Errorf("alertValue(%v, %v) = %q, want %q", tt.value, tt.threshold, got, tt.want)
+		}
+	}
+	if got := alertValue(alerts.Alert{Kind: alerts.KindOffline}); got != "" {
+		t.Errorf("offline value = %q", got)
+	}
+}
 
 func newTestAlerts(t *testing.T) *alertsScreen {
 	t.Helper()

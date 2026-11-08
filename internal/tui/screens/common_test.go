@@ -1,6 +1,7 @@
 package screens
 
 import (
+	"math"
 	"slices"
 	"strings"
 	"testing"
@@ -116,6 +117,36 @@ func TestWrapWords(t *testing.T) {
 				t.Errorf("line %q wider than %d", l, tt.w)
 			}
 		}
+	}
+}
+
+func TestMeanSeries(t *testing.T) {
+	nan := math.NaN()
+	got := meanSeries([]float64{2, 4, 6}, []float64{8, nan}, nil)
+	if len(got) != 3 || got[0] != 2 || got[1] != 6 || got[2] != 6 {
+		t.Fatalf("got %v, want [2 6 6]", got)
+	}
+	if got := meanSeries([]float64{nan}); len(got) != 1 || !math.IsNaN(got[0]) {
+		t.Fatalf("all-NaN point = %v, want NaN", got)
+	}
+	if got := meanSeries(); len(got) != 0 {
+		t.Fatalf("no series = %v", got)
+	}
+}
+
+func TestResample(t *testing.T) {
+	values := []float64{1, 2, 3, 4, 5, 6, 7}
+	if got := resample(values, 10); !slices.Equal(got, values) {
+		t.Fatalf("fitting values changed: %v", got)
+	}
+	if got, want := resample(values, 3), []float64{1.5, 3.5, 6}; !slices.Equal(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	if got := resample([]float64{math.NaN(), math.NaN(), 1, math.NaN()}, 2); !math.IsNaN(got[0]) || got[1] != 1 {
+		t.Fatalf("NaN buckets: %v", got)
+	}
+	if got := resample(values, 0); got != nil {
+		t.Fatalf("zero columns: %v", got)
 	}
 }
 

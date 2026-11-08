@@ -25,7 +25,11 @@ type Column struct {
 	Min int
 	// Flex weights how extra space is shared among flexible columns
 	// (0 is treated as 1).
-	Flex  int
+	Flex int
+	// Max caps the width a flexible column grows to; 0 means unlimited.
+	// Space a capped column cannot take goes to the other flexible
+	// columns, or stays blank at the right when every one is capped.
+	Max   int
 	Align Align
 }
 
@@ -116,8 +120,10 @@ func ScrollOffset(n, visible, selected, offset int) int {
 // ColumnWidths lays out columns into total cells with columnGap between
 // them. It keeps the longest prefix of columns whose fixed widths and
 // flexible minimums fit, then shares the leftover space among the kept
-// flexible columns by Flex weight. Dropped columns get width 0. If not
-// even the first column fits, it is narrowed to total.
+// flexible columns by Flex weight, never growing a column beyond its Max.
+// Dropped columns get width 0. If not even the first column fits, it is
+// narrowed to total. The widths may sum to less than total when every
+// flexible column is capped.
 func ColumnWidths(cols []Column, total int) []int {
 	widths := make([]int, len(cols))
 	if len(cols) == 0 || total <= 0 {
@@ -149,31 +155,66 @@ func ColumnWidths(cols []Column, total int) []int {
 		widths[0] = total
 		return widths
 	}
-	weights, sum := make([]int, kept), 0
+	weights := make([]int, kept)
 	for i := range kept {
 		if cols[i].Width > 0 {
 			continue
 		}
 		weights[i] = max(cols[i].Flex, 1)
-		sum += weights[i]
 	}
-	if sum == 0 {
-		return widths
-	}
-	extra := total - used
-	given := 0
-	for i := range kept {
-		share := extra * weights[i] / sum
-		widths[i] += share
-		given += share
-	}
-	for i := 0; given < extra; i = (i + 1) % kept {
-		if weights[i] > 0 {
-			widths[i]++
-			given++
-		}
-	}
+	growFlexible(cols[:kept], widths[:kept], weights, total-used)
 	return widths
+}
+
+// growFlexible shares extra cells among the columns with a positive
+// weight. Columns whose proportional share would exceed their Max are
+// set to Max and taken out of the sharing, which then repeats with the
+// rest; the final shares are proportional with the rounding remainder
+// handed out left to right.
+func growFlexible(cols []Column, widths, weights []int, extra int) {
+	room := func(i int) int {
+		if cols[i].Max <= 0 {
+			return -1
+		}
+		return max(cols[i].Max-widths[i], 0)
+	}
+	for extra > 0 {
+		sum := 0
+		for _, wt := range weights {
+			sum += wt
+		}
+		if sum == 0 {
+			return
+		}
+		capped := false
+		for i, wt := range weights {
+			if wt == 0 {
+				continue
+			}
+			if r := room(i); r >= 0 && extra*wt/sum >= r {
+				widths[i] += r
+				extra -= r
+				weights[i] = 0
+				capped = true
+			}
+		}
+		if capped {
+			continue
+		}
+		given := 0
+		for i, wt := range weights {
+			share := extra * wt / sum
+			widths[i] += share
+			given += share
+		}
+		for i := 0; given < extra; i = (i + 1) % len(weights) {
+			if weights[i] > 0 {
+				widths[i]++
+				given++
+			}
+		}
+		return
+	}
 }
 
 // joinCells aligns and truncates each cell to its column width and joins

@@ -1,6 +1,7 @@
 package screens
 
 import (
+	"math"
 	"strconv"
 	"strings"
 
@@ -17,6 +18,12 @@ import (
 const (
 	allClearHeight = 9
 	recentMinH     = 5
+	// alertKindW fits the longest kind, "offline" and "memory".
+	alertKindW = 7
+	// alertMessageMinW is the message width below which the VALUE, then
+	// the SINCE column give way.
+	alertMessageMinW = 28
+	alertServerMaxW  = 24
 )
 
 // alertAckedMsg is the result of acknowledging alerts.
@@ -66,7 +73,7 @@ func newAlerts(d *ui.Deps) *alertsScreen {
 
 func (s *alertsScreen) Tab() ui.TabID   { return ui.TabAlerts }
 func (s *alertsScreen) Title() string   { return "Alerts" }
-func (s *alertsScreen) Icon() string    { return "⚡" }
+func (s *alertsScreen) Icon() string    { return glyphWarn }
 func (s *alertsScreen) Init() tea.Cmd   { return nil }
 func (s *alertsScreen) Capturing() bool { return false }
 
@@ -339,20 +346,31 @@ func severityBadge(t *theme.Theme, sev alerts.Severity) string {
 	return widgets.Badge(t, "WARN", theme.ToneWarn)
 }
 
-// alertValue renders "value ≥ threshold" for utilization alerts.
+// alertValue compares the value of a utilization alert with its threshold:
+// "93% ≥ 80%" while it is reached and "77% < 80%" inside the hysteresis
+// band. Offline alerts have no value.
 func alertValue(a alerts.Alert) string {
 	if a.Kind == alerts.KindOffline {
 		return ""
 	}
-	return format.Percent(a.Value) + " ≥ " + format.Percent(a.Threshold)
+	limit := strconv.FormatFloat(a.Threshold, 'f', -1, 64) + "%"
+	if a.Value >= a.Threshold {
+		return comparedPct(a.Value, a.Threshold) + " ≥ " + limit
+	}
+	return comparedPct(a.Value, a.Threshold) + " < " + limit
 }
 
-// alertKind renders the kind with its subject, e.g. "disk /var".
-func alertKind(a alerts.Alert) string {
-	if a.Subject == "" {
-		return a.Kind.String()
+// comparedPct formats value like the alert engine's messages: truncated,
+// so a value below the threshold never displays as reaching it (79.6
+// against 80 shows "79%"); one decimal for fractional thresholds.
+func comparedPct(value, threshold float64) string {
+	if math.IsNaN(value) || math.IsInf(value, 0) {
+		return format.Percent(value)
 	}
-	return a.Kind.String() + " " + clean(a.Subject)
+	if threshold == math.Trunc(threshold) {
+		return strconv.FormatFloat(math.Floor(value), 'f', 0, 64) + "%"
+	}
+	return strconv.FormatFloat(math.Floor(value*10)/10, 'f', 1, 64) + "%"
 }
 
 func (s *alertsScreen) activeColumns() []prioColumn[alertEntry] {
@@ -368,19 +386,19 @@ func (s *alertsScreen) activeColumns() []prioColumn[alertEntry] {
 		{widgets.Column{Title: "SEV", Width: 6}, 100, func(e alertEntry) string {
 			return severityBadge(t, e.alert.Severity)
 		}},
-		{widgets.Column{Title: "SERVER", Min: 10, Flex: 1}, 99, func(e alertEntry) string {
+		{widgets.Column{Title: "SERVER", Min: 10, Flex: 1, Max: alertServerMaxW}, 99, func(e alertEntry) string {
 			return fg(text(e), bold(clean(e.alert.ServerName)))
 		}},
-		{widgets.Column{Title: "KIND", Min: 7, Flex: 1}, 80, func(e alertEntry) string {
-			return fg(t.P.Muted, alertKind(e.alert))
+		{widgets.Column{Title: "KIND", Width: alertKindW}, 80, func(e alertEntry) string {
+			return fg(t.P.Muted, e.alert.Kind.String())
 		}},
-		{widgets.Column{Title: "MESSAGE", Min: 14, Flex: 3}, 90, func(e alertEntry) string {
+		{widgets.Column{Title: "MESSAGE", Min: alertMessageMinW, Flex: 4}, 90, func(e alertEntry) string {
 			return fg(text(e), clean(e.alert.Message))
 		}},
-		{widgets.Column{Title: "VALUE", Width: 11, Align: widgets.AlignRightCol}, 50, func(e alertEntry) string {
+		{widgets.Column{Title: "VALUE", Width: 11, Align: widgets.AlignRightCol}, 40, func(e alertEntry) string {
 			return fg(t.ToneColor(severityTone(e.alert.Severity)), alertValue(e.alert))
 		}},
-		{widgets.Column{Title: "SINCE", Width: 8, Align: widgets.AlignRightCol}, 85, func(e alertEntry) string {
+		{widgets.Column{Title: "SINCE", Width: 8, Align: widgets.AlignRightCol}, 60, func(e alertEntry) string {
 			return fg(t.P.Muted, format.Duration(now.Sub(e.alert.Since)))
 		}},
 		{widgets.Column{Title: "ACK", Width: 3, Align: widgets.AlignCenterCol}, 70, func(e alertEntry) string {
@@ -412,13 +430,13 @@ func (s *alertsScreen) recentPanel(resolved []alertEntry, cur alertEntry, w, h i
 		{widgets.Column{Title: "SEV", Width: 4}, 60, func(e alertEntry) string {
 			return faint(e.alert.Severity.String())
 		}},
-		{widgets.Column{Title: "SERVER", Min: 10, Flex: 1}, 99, func(e alertEntry) string {
+		{widgets.Column{Title: "SERVER", Min: 10, Flex: 1, Max: alertServerMaxW}, 99, func(e alertEntry) string {
 			return faint(clean(e.alert.ServerName))
 		}},
-		{widgets.Column{Title: "KIND", Min: 7, Flex: 1}, 80, func(e alertEntry) string {
-			return faint(alertKind(e.alert))
+		{widgets.Column{Title: "KIND", Width: alertKindW}, 80, func(e alertEntry) string {
+			return faint(e.alert.Kind.String())
 		}},
-		{widgets.Column{Title: "MESSAGE", Min: 14, Flex: 3}, 90, func(e alertEntry) string {
+		{widgets.Column{Title: "MESSAGE", Min: alertMessageMinW, Flex: 4}, 90, func(e alertEntry) string {
 			return faint(clean(e.alert.Message))
 		}},
 		{widgets.Column{Title: "LASTED", Width: 8, Align: widgets.AlignRightCol}, 70, func(e alertEntry) string {

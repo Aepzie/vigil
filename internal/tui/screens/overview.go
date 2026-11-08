@@ -1,8 +1,10 @@
 package screens
 
 import (
+	"math"
 	"strconv"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -30,6 +32,24 @@ const (
 	bigSummaryH    = 5
 	bigSummaryMinH = 28
 	stripGapMinH   = 16
+	// listMinRows is the fewest body rows of a list sized to its servers.
+	listMinRows = 4
+	// fleetChartsMinH is the spare height below the servers that turns
+	// on the fleet chart row; fleetChartsMinW is the narrowest screen
+	// that gets it.
+	fleetChartsMinH = 10
+	fleetChartsMinW = 100
+)
+
+// Sparkline columns of the server list.
+const (
+	sparkWindow  = time.Minute
+	sparkMinW    = 10
+	sparkMaxW    = 60
+	colCPUSpark  = "CPU 60s"
+	colNetSpark  = "NET 60s"
+	netHeadroom  = 1.15
+	netScaleTick = 5
 )
 
 // overviewAction is a palette-triggered action of the Overview screen.
@@ -333,13 +353,138 @@ func (s *overview) View(width, height int) string {
 	}
 	if mainH := height - used; mainH > 0 {
 		rows := s.rows()
+		serversH, chartsH := s.mainLayout(width, mainH)
 		if s.mode == overviewTiles {
-			blocks = append(blocks, s.tiles(rows, width, mainH))
+			blocks = append(blocks, s.tiles(rows, width, serversH))
 		} else {
-			blocks = append(blocks, s.list(rows, width, mainH))
+			blocks = append(blocks, s.list(rows, width, serversH))
+		}
+		if chartsH > 0 {
+			blocks = append(blocks, s.fleetCharts(all, width, chartsH))
 		}
 	}
 	return widgets.Fit(widgets.JoinV(blocks...), width, height)
+}
+
+// mainLayout splits the h rows below the summary between the servers and
+// the fleet charts. The servers keep the whole area unless sizing them to
+// the fleet leaves at least fleetChartsMinH rows for the charts on a
+// screen at least fleetChartsMinW wide. Sizes
+// follow the fleet rather than the filtered rows so typing a filter does
+// not move the charts.
+func (s *overview) mainLayout(w, h int) (serversH, chartsH int) {
+	n := len(s.fleet.Servers)
+	need := max(n, listMinRows) + 3
+	if s.mode == overviewTiles {
+		cols := tileColumns(n, w)
+		need = (n + cols - 1) / cols * tileHeight
+	}
+	if spare := h - need; spare >= fleetChartsMinH && w >= fleetChartsMinW {
+		return need, spare
+	}
+	return h, 0
+}
+
+// fleetCharts is the row of fleet-wide history charts.
+func (s *overview) fleetCharts(all []serverRow, w, h int) string {
+	widths := widgets.SplitWidths(w, 2, 1)
+	return widgets.JoinH(
+		s.fleetCPU(all, widths[0], h),
+		widgets.Blank(1, h),
+		s.fleetNet(all, widths[1], h),
+	)
+}
+
+// fleetCPU charts the average CPU of the online servers.
+func (s *overview) fleetCPU(all []serverRow, w, h int) string {
+	t := s.t
+	ft := totals(all)
+	iw, ih := widgets.PanelInner(w, h)
+	body := widgets.AreaChart(t, widgets.ChartOpts{
+		Width: iw, Height: ih, Max: 100, Step: fleetStep(s.fleet), YLabel: format.Percent,
+		Series: []widgets.Series{{Name: "cpu", Values: ft.cpuHist, Color: t.P.Accent}},
+	})
+	info := "no server online"
+	if ft.online > 0 {
+		info = "avg " + format.Percent(ft.cpuAvg) + glyphSep + strconv.Itoa(ft.online) + " online"
+	}
+	return widgets.Panel(t, widgets.PanelOpts{Width: w, Height: h, Title: "Fleet CPU", Info: info, Body: body})
+}
+
+// fleetNet charts the summed receive and transmit rates of the online
+// servers.
+func (s *overview) fleetNet(all []serverRow, w, h int) string {
+	t := s.t
+	var rx, tx []float64
+	for _, r := range all {
+		if r.Online() {
+			rx = sumSeries(rx, r.Hist.RxBps)
+			tx = sumSeries(tx, r.Hist.TxBps)
+		}
+	}
+	iw, ih := widgets.PanelInner(w, h)
+	body := widgets.LineChart(t, widgets.ChartOpts{
+		Width: iw, Height: ih, Step: fleetStep(s.fleet), YLabel: format.Bits,
+		Series: []widgets.Series{
+			{Name: "rx", Values: rx, Color: t.P.Accent2},
+			{Name: "tx", Values: tx, Color: t.P.Accent},
+		},
+	})
+	ft := totals(all)
+	info := glyphDown + " " + format.Bits(ft.rx) + "  " + glyphUp + " " + format.Bits(ft.tx)
+	return widgets.Panel(t, widgets.PanelOpts{Width: w, Height: h, Title: "Fleet network", Info: info, Body: body})
+}
+
+// fleetStep is the sampling interval of the fleet history.
+func fleetStep(f ui.Fleet) time.Duration {
+	for _, srv := range f.Servers {
+		if step := f.History[srv.ID].Step; step > 0 {
+			return step
+		}
+	}
+	return time.Second
+}
+
+// sparkValues returns the sparkWindow newest values resampled into at
+// most w columns. Missing older samples are NaN, so a short history is
+// drawn on the same time scale as a full one.
+func sparkValues(values []float64, step time.Duration, w int) []float64 {
+	n := max(int(sparkWindow/max(step, time.Millisecond)), 1)
+	window := tail(values, n)
+	if len(window) < n {
+		padded := make([]float64, n)
+		for i := range n - len(window) {
+			padded[i] = math.NaN()
+		}
+		copy(padded[n-len(window):], window)
+		window = padded
+	}
+	return resample(window, w)
+}
+
+// sparkMax is the widest useful sparkline: one column per sample.
+func sparkMax(step time.Duration) int {
+	return clamp(int(sparkWindow/max(step, time.Millisecond)), sparkMinW, sparkMaxW)
+}
+
+// cpuSparkline draws CPU history on the fixed 0–100% scale.
+func cpuSparkline(values []float64, step time.Duration, w int, c theme.RGB) string {
+	return widgets.SparklineRange(sparkValues(values, step, w), w, 0, 100, c)
+}
+
+// netSparkline draws network history from zero to a nice value above the
+// window's peak, so steady traffic shows its variation without filling
+// every cell.
+func netSparkline(values []float64, step time.Duration, w int, c theme.RGB) string {
+	window := sparkValues(values, step, w)
+	peak := 0.0
+	for _, v := range window {
+		if v > peak && !math.IsInf(v, 1) {
+			peak = v
+		}
+	}
+	top, _ := widgets.NiceScale(peak*netHeadroom, netScaleTick)
+	return widgets.SparklineRange(window, w, 0, top, c)
 }
 
 func (s *overview) emptyView(w, h int) string {
@@ -363,7 +508,7 @@ type fleetTotals struct {
 
 func totals(rows []serverRow) fleetTotals {
 	var ft fleetTotals
-	var hist []float64
+	var hist [][]float64
 	for _, r := range rows {
 		if r.Has && r.Snap.State == metrics.StateOffline {
 			ft.offline++
@@ -378,15 +523,12 @@ func totals(rows []serverRow) fleetTotals {
 		ft.cpuAvg += r.Snap.CPU.Total
 		ft.rx += r.Snap.Net.RxBps
 		ft.tx += r.Snap.Net.TxBps
-		hist = sumSeries(hist, r.Hist.CPU)
+		hist = append(hist, r.Hist.CPU)
 	}
 	if ft.online > 0 {
 		ft.cpuAvg /= float64(ft.online)
-		for i := range hist {
-			hist[i] /= float64(ft.online)
-		}
 	}
-	ft.cpuHist = hist
+	ft.cpuHist = meanSeries(hist...)
 	return ft
 }
 
@@ -515,8 +657,13 @@ func (s *overview) listInfo(shown int) string {
 // list renders the table panel.
 func (s *overview) list(rows []serverRow, w, h int) string {
 	iw, ih := widgets.PanelInner(w, h)
-	cols := fitColumns(s.listColumns(), iw)
-	columns, cells := tableData(cols, rows)
+	widths := map[string]int{}
+	cols := fitColumns(s.listColumns(func(title string) int { return widths[title] }), iw)
+	columns, _ := tableData(cols, []serverRow(nil))
+	for i, cw := range widgets.ColumnWidths(columns, iw) {
+		widths[columns[i].Title] = cw
+	}
+	_, cells := tableData(cols, rows)
 	empty := "No servers match “" + s.filter.Value() + "”"
 	table := widgets.Table(s.t, widgets.TableOpts{
 		Width: iw, Height: ih, Columns: columns, Rows: cells,
@@ -529,10 +676,14 @@ func (s *overview) list(rows []serverRow, w, h int) string {
 }
 
 // listColumns defines every possible list column with its priority.
-func (s *overview) listColumns() []prioColumn[serverRow] {
+// widthOf reports the laid-out width of a column by title when the cells
+// are rendered; the sparklines are drawn at that width.
+func (s *overview) listColumns(widthOf func(title string) int) []prioColumn[serverRow] {
 	t := s.t
 	set := s.fleet.Settings
 	now := s.fleet.Now
+	step := fleetStep(s.fleet)
+	sparkCap := sparkMax(step)
 	none := fg(t.P.Faint, glyphNone)
 	live := func(r serverRow, render func() string) string {
 		if !r.Online() {
@@ -540,15 +691,14 @@ func (s *overview) listColumns() []prioColumn[serverRow] {
 		}
 		return render()
 	}
-	const sparkW = 10
 	return []prioColumn[serverRow]{
 		{widgets.Column{Width: 1}, 100, func(r serverRow) string {
 			return fg(t.ToneColor(r.Status.Tone), glyphDot)
 		}},
-		{widgets.Column{Title: "NAME", Min: 10, Flex: 2}, 99, func(r serverRow) string {
+		{widgets.Column{Title: "NAME", Min: 10, Flex: 2, Max: 24}, 99, func(r serverRow) string {
 			return fg(t.P.Text, r.Name())
 		}},
-		{widgets.Column{Title: "HOST", Min: 12, Flex: 2}, 52, func(r serverRow) string {
+		{widgets.Column{Title: "HOST", Min: 12, Flex: 2, Max: 28}, 52, func(r serverRow) string {
 			return fg(t.P.Muted, clean(r.Srv.Host))
 		}},
 		{widgets.Column{Title: "STATUS", Width: 8}, 60, func(r serverRow) string {
@@ -557,9 +707,9 @@ func (s *overview) listColumns() []prioColumn[serverRow] {
 		{widgets.Column{Title: "CPU", Width: 5, Align: widgets.AlignRightCol}, 90, func(r serverRow) string {
 			return live(r, func() string { return pctText(t, set, metricCPU, r.Snap.CPU.Total, false) })
 		}},
-		{widgets.Column{Title: "CPU 60s", Width: sparkW}, 40, func(r serverRow) string {
+		{widgets.Column{Title: colCPUSpark, Min: sparkMinW, Flex: 3, Max: sparkCap}, 40, func(r serverRow) string {
 			return live(r, func() string {
-				return widgets.Sparkline(tail(r.Hist.CPU, sparkW), sparkW, 100, pctColor(t, set, metricCPU, r.Snap.CPU.Total, false))
+				return cpuSparkline(r.Hist.CPU, step, widthOf(colCPUSpark), pctColor(t, set, metricCPU, r.Snap.CPU.Total, false))
 			})
 		}},
 		{widgets.Column{Title: "RAM", Width: 5, Align: widgets.AlignRightCol}, 85, func(r serverRow) string {
@@ -577,9 +727,9 @@ func (s *overview) listColumns() []prioColumn[serverRow] {
 		{widgets.Column{Title: "TX", Width: 9, Align: widgets.AlignRightCol}, 64, func(r serverRow) string {
 			return live(r, func() string { return fg(t.P.Accent, format.Bits(r.Snap.Net.TxBps)) })
 		}},
-		{widgets.Column{Title: "NET 60s", Width: sparkW}, 35, func(r serverRow) string {
+		{widgets.Column{Title: colNetSpark, Min: sparkMinW, Flex: 3, Max: sparkCap}, 35, func(r serverRow) string {
 			return live(r, func() string {
-				return widgets.Sparkline(tail(sumSeries(r.Hist.RxBps, r.Hist.TxBps), sparkW), sparkW, 0, t.P.Accent2)
+				return netSparkline(sumSeries(r.Hist.RxBps, r.Hist.TxBps), step, widthOf(colNetSpark), t.P.Accent2)
 			})
 		}},
 		{widgets.Column{Title: "LOAD", Width: 5, Align: widgets.AlignRightCol}, 45, func(r serverRow) string {
@@ -609,10 +759,7 @@ func (s *overview) tiles(rows []serverRow, w, h int) string {
 			fg(s.t.P.Muted, "No servers match “"+s.filter.Value()+"”"),
 		})
 	}
-	cols := max((w+1)/(tileMinWidth+1), 1)
-	if len(rows) < cols {
-		cols = max(len(rows), (w+1)/(tileMaxWidth+1), 1)
-	}
+	cols := tileColumns(len(rows), w)
 	s.tileCols = cols
 	widths := widgets.SplitWidths(w, cols, 1)
 	tileH := min(tileHeight, h)
@@ -637,7 +784,34 @@ func (s *overview) tiles(rows []serverRow, w, h int) string {
 		}
 		lines = append(lines, widgets.JoinH(blocks...))
 	}
+	if gridRows > visible && h > visible*tileH {
+		lines = append(lines, s.tileScrollLine(first*cols, min((first+visible)*cols, len(rows)), len(rows), w))
+	}
 	return widgets.Fit(widgets.JoinV(lines...), w, h)
+}
+
+// tileScrollLine tells which tiles [from, to) of n are shown and in which
+// directions more are hidden.
+func (s *overview) tileScrollLine(from, to, n, w int) string {
+	text := strconv.Itoa(from+1) + "–" + strconv.Itoa(to) + " of " + strconv.Itoa(n)
+	if from > 0 {
+		text = glyphUp + " " + text
+	}
+	if to < n {
+		text += " " + glyphDown
+	}
+	return widgets.AlignRight(fg(s.t.P.Muted, text)+" ", w)
+}
+
+// tileColumns is the number of tiles per grid row for n servers in w
+// cells: as many minimum-width tiles as fit, or fewer, wider tiles (up
+// to tileMaxWidth) when there are fewer servers than slots.
+func tileColumns(n, w int) int {
+	cols := max((w+1)/(tileMinWidth+1), 1)
+	if n < cols {
+		cols = max(n, (w+1)/(tileMaxWidth+1), 1)
+	}
+	return cols
 }
 
 // tile renders one server as a small panel.
@@ -663,6 +837,7 @@ func (s *overview) tileBody(r serverRow, iw int) []string {
 	const labelW, valueW = 5, 8
 	label := func(text string) string { return widgets.FitLine(fg(t.P.Muted, text), labelW) }
 	sparkW := max(iw-labelW-valueW-1, 0)
+	step := fleetStep(s.fleet)
 	cpu := r.Snap.CPU.Total
 	mem := r.Snap.Mem.UsedPct()
 	disk, _ := r.Snap.MaxDiskPct()
@@ -675,19 +850,30 @@ func (s *overview) tileBody(r serverRow, iw int) []string {
 		return label(name) + widgets.Progress(t, barW, pct/100, c) + widgets.AlignRight(fg(c, format.Percent(pct)), 5)
 	}
 	return []string{
-		label("CPU") + widgets.Sparkline(tail(r.Hist.CPU, sparkW), sparkW, 100, cpuColor) + " " +
+		label("CPU") + cpuSparkline(r.Hist.CPU, step, sparkW, cpuColor) + " " +
 			widgets.AlignRight(fg(cpuColor, format.Percent(cpu)), valueW),
-		label("NET") + widgets.Sparkline(tail(sumSeries(r.Hist.RxBps, r.Hist.TxBps), sparkW), sparkW, 0, t.P.Accent2) + " " +
+		label("NET") + netSparkline(sumSeries(r.Hist.RxBps, r.Hist.TxBps), step, sparkW, t.P.Accent2) + " " +
 			widgets.AlignRight(fg(t.P.Accent2, format.Bits(net)), valueW),
 		bar("cpu", metricCPU, cpu),
 		bar("mem", metricMem, mem),
 		bar("disk", metricDisk, disk),
-		joinDots(t,
+		fittingDots(t, iw,
 			labelValue(t, "lat", fg(t.P.Text, format.Latency(r.Snap.Latency))),
 			labelValue(t, "load", fg(t.P.Text, loadText(r.Snap.Load.One))),
 			labelValue(t, "up", fg(t.P.Text, format.Duration(r.Snap.Uptime))),
 		),
 	}
+}
+
+// fittingDots joins the longest prefix of parts that fits into w cells,
+// so a narrow tile drops whole facts instead of cutting one in half.
+func fittingDots(t *theme.Theme, w int, parts ...string) string {
+	for n := len(parts); n > 1; n-- {
+		if line := joinDots(t, parts[:n]...); ansi.StringWidth(line) <= w {
+			return line
+		}
+	}
+	return joinDots(t, parts[:min(len(parts), 1)]...)
 }
 
 // tileOffline is the tile content for servers without live data.

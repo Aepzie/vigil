@@ -84,7 +84,7 @@ func TestScreenIdentity(t *testing.T) {
 		{NewOverview(d), ui.TabOverview, "Overview", "◉"},
 		{NewServers(d), ui.TabServers, "Servers", "≡"},
 		{NewDetail(d), ui.TabDetail, "Detail", "◈"},
-		{NewAlerts(d), ui.TabAlerts, "Alerts", "⚡"},
+		{NewAlerts(d), ui.TabAlerts, "Alerts", "▲"},
 		{NewSettings(d), ui.TabSettings, "Settings", "✱"},
 	}
 	for _, tt := range tests {

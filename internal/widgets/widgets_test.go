@@ -340,6 +340,41 @@ func TestSparkline(t *testing.T) {
 	}
 }
 
+func TestSparklineRange(t *testing.T) {
+	c := theme.Default().P.Accent
+	inputs := [][]float64{nil, {1}, {0, 0}, {math.NaN(), -1, 5, math.Inf(1), math.Inf(-1)}, slicesRepeat(3, 300)}
+	for _, w := range testWidths {
+		for _, values := range inputs {
+			assertBlock(t, "SparklineRange", SparklineRange(values, w, 0, 10, c), w, 1)
+			assertBlock(t, "SparklineRange empty scale", SparklineRange(values, w, 5, 5, c), w, 1)
+			assertBlock(t, "SparklineRange inverted", SparklineRange(values, w, 10, 0, c), w, 1)
+		}
+	}
+	tests := []struct {
+		name   string
+		values []float64
+		width  int
+		lo, hi float64
+		want   string
+	}{
+		{"fixed scale is not stretched", []float64{9, 10, 9, 10}, 4, 0, 20, "▄▅▄▅"},
+		{"lo offset", []float64{10, 15, 20}, 3, 10, 20, "▁▅█"},
+		{"clamped outside the scale", []float64{-5, 30}, 2, 0, 10, "▁█"},
+		{"right-aligned with NaN gaps", []float64{0, math.NaN(), 8}, 5, 0, 8, "  ▁ █"},
+		{"newest values kept", []float64{8, 8, 0, 4}, 2, 0, 8, "▁▅"},
+		{"empty scale", []float64{3, 7}, 2, 5, 5, "▁▁"},
+	}
+	for _, tc := range tests {
+		got := SparklineRange(tc.values, tc.width, tc.lo, tc.hi, c)
+		if s := ansi.Strip(got); s != tc.want {
+			t.Errorf("%s: got %q, want %q", tc.name, s, tc.want)
+		}
+		if w := ansi.StringWidth(got); w != tc.width {
+			t.Errorf("%s: width %d, want %d", tc.name, w, tc.width)
+		}
+	}
+}
+
 func TestProgress(t *testing.T) {
 	th := theme.Default()
 	for _, w := range testWidths {
@@ -502,6 +537,76 @@ func TestColumnWidths(t *testing.T) {
 		if fmt.Sprint(got) != fmt.Sprint(tc.want) {
 			t.Errorf("ColumnWidths(%d) = %v, want %v", tc.total, got, tc.want)
 		}
+	}
+}
+
+func TestColumnWidthsMax(t *testing.T) {
+	tests := []struct {
+		name  string
+		cols  []Column
+		total int
+		want  []int
+	}{
+		{
+			"below the cap grows as before",
+			[]Column{{Title: "A", Min: 4, Max: 20}, {Title: "B", Min: 4}},
+			20, []int{9, 9},
+		},
+		{
+			"capped column hands space to the others",
+			[]Column{{Title: "A", Min: 4, Max: 10}, {Title: "B", Min: 4, Flex: 1}, {Title: "C", Width: 3}},
+			50, []int{10, 33, 3},
+		},
+		{
+			"caps cascade",
+			[]Column{{Title: "A", Min: 4, Max: 6}, {Title: "B", Min: 4, Max: 12}, {Title: "C", Min: 4, Flex: 2}},
+			60, []int{6, 12, 38},
+		},
+		{
+			"every flexible column capped pads at the right",
+			[]Column{{Title: "A", Min: 4, Max: 8}, {Title: "B", Width: 5}, {Title: "C", Min: 4, Max: 10}},
+			60, []int{8, 5, 10},
+		},
+		{
+			"min above max keeps min",
+			[]Column{{Title: "A", Min: 9, Max: 5}, {Title: "B", Min: 2}},
+			30, []int{9, 19},
+		},
+		{
+			"weighted shares below every cap",
+			[]Column{{Title: "N", Min: 10, Max: 24}, {Title: "H", Min: 12, Max: 28}, {Title: "S", Min: 10, Flex: 4, Max: 60}, {Title: "T", Min: 10, Flex: 4, Max: 60}},
+			160, []int{22, 24, 54, 54},
+		},
+		{
+			"heavy columns saturate first, light ones follow",
+			[]Column{{Title: "N", Min: 10, Max: 24}, {Title: "H", Min: 12, Max: 28}, {Title: "S", Min: 10, Flex: 4, Max: 60}, {Title: "T", Min: 10, Flex: 4, Max: 60}},
+			180, []int{24, 28, 60, 60},
+		},
+	}
+	for _, tc := range tests {
+		got := ColumnWidths(tc.cols, tc.total)
+		if fmt.Sprint(got) != fmt.Sprint(tc.want) {
+			t.Errorf("%s: ColumnWidths(%d) = %v, want %v", tc.name, tc.total, got, tc.want)
+		}
+		for i, c := range tc.cols {
+			if c.Max > 0 && got[i] > max(c.Max, c.Min) {
+				t.Errorf("%s: column %d width %d exceeds Max %d", tc.name, i, got[i], c.Max)
+			}
+		}
+	}
+}
+
+func TestTableCappedColumnsPadRight(t *testing.T) {
+	th := theme.Default()
+	cols := []Column{{Title: "NAME", Min: 4, Max: 6}, {Title: "V", Width: 3}}
+	out := Table(th, TableOpts{Width: 30, Height: 3, Columns: cols, Rows: [][]string{{"alpha", "1"}}, Selected: 0})
+	assertBlock(t, "Table capped", out, 30, 3)
+	lines := strings.Split(ansi.Strip(out), "\n")
+	if want := "NAME    V" + strings.Repeat(" ", 21); lines[0] != want {
+		t.Errorf("header = %q, want %q", lines[0], want)
+	}
+	if want := "alpha   1" + strings.Repeat(" ", 21); lines[1] != want {
+		t.Errorf("row = %q, want %q", lines[1], want)
 	}
 }
 
