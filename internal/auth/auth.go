@@ -12,6 +12,11 @@
 // display. Lines with key options (from=, command=, restrict, ...) are
 // ignored because vigil cannot enforce them, as are malformed lines and
 // comments.
+//
+// On Unix both files must be owned by the user running vigil; users.json
+// must not be accessible by group or others and authorized_keys must not
+// be writable by them. A file failing these checks is not used (treated as
+// empty) and the problem is reported by New and Err.
 package auth
 
 import (
@@ -32,6 +37,8 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/ssh"
+
+	"github.com/CraguS/vigil/internal/fsperm"
 )
 
 // File names inside the data directory.
@@ -100,11 +107,13 @@ type usersDoc struct {
 }
 
 // fileStamp identifies a version of a file on disk; a zero stamp means
-// the file does not exist.
+// the file does not exist. The mode is part of it so that a chmod causes
+// a re-read and with it a new permission check.
 type fileStamp struct {
 	exists  bool
 	modTime time.Time
 	size    int64
+	mode    fs.FileMode
 }
 
 func stat(path string) (fileStamp, error) {
@@ -115,7 +124,7 @@ func stat(path string) (fileStamp, error) {
 	if err != nil {
 		return fileStamp{}, err
 	}
-	return fileStamp{exists: true, modTime: fi.ModTime(), size: fi.Size()}, nil
+	return fileStamp{exists: true, modTime: fi.ModTime(), size: fi.Size(), mode: fi.Mode()}, nil
 }
 
 // Authenticator is safe for concurrent use. Files are re-read when their
@@ -172,6 +181,13 @@ func (a *Authenticator) refreshLocked() {
 }
 
 func readUsers(path string) (map[string][]byte, error) {
+	err := fsperm.CheckPrivateFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return map[string][]byte{}, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("refusing to use %s: %w", UsersFile, err)
+	}
 	raw, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
 		return map[string][]byte{}, nil
@@ -200,6 +216,13 @@ func readUsers(path string) (map[string][]byte, error) {
 }
 
 func readKeys(path string) ([][]byte, error) {
+	err := fsperm.CheckNotWritableByOthers(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("refusing to use %s: %w", AuthorizedKeysFile, err)
+	}
 	raw, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil

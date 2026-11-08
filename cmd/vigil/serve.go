@@ -15,6 +15,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/CraguS/vigil/internal/auth"
+	"github.com/CraguS/vigil/internal/fsperm"
 	"github.com/CraguS/vigil/internal/server"
 	"github.com/CraguS/vigil/internal/theme"
 )
@@ -46,6 +47,9 @@ func cmdServe(args []string, std stdio) error {
 	}
 	dataDir, err := resolveDataDir(*data)
 	if err != nil {
+		return err
+	}
+	if err := secureDataDir(dataDir, std.err); err != nil {
 		return err
 	}
 
@@ -90,6 +94,20 @@ func cmdServe(args []string, std stdio) error {
 		})
 	})
 	return g.Wait()
+}
+
+// secureDataDir creates the data directory if needed and, on Unix,
+// requires it to be owned by the current user. Permissions looser than
+// 0700 are tightened, with a notice on w.
+func secureDataDir(dataDir string, w io.Writer) error {
+	tightened, err := fsperm.EnsurePrivateDir(dataDir)
+	if err != nil {
+		return fmt.Errorf("data directory: %w", err)
+	}
+	if tightened {
+		fmt.Fprintf(w, "vigil: tightened permissions of data directory %s to 0700\n", dataDir)
+	}
+	return nil
 }
 
 func ignoreCanceled(err error) error {

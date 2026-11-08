@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
+
+	"github.com/CraguS/vigil/internal/fsperm"
 )
 
 const (
@@ -35,26 +37,33 @@ func keyComment() string {
 }
 
 // loadOrCreateKey loads <dir>/id_ed25519 or generates it on first start.
-// It also (re)writes <dir>/id_ed25519.pub when it is missing.
+// It also (re)writes <dir>/id_ed25519.pub when it is missing. On Unix an
+// existing key must be owned by the current user with no group or other
+// permissions, or it is refused.
 func loadOrCreateKey(dir, comment string) (ssh.Signer, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, fmt.Errorf("create data directory: %w", err)
 	}
 	path := filepath.Join(dir, keyFileName)
-	signer, err := loadKey(path)
-	switch {
-	case errors.Is(err, fs.ErrNotExist):
-		signer, err = createKey(path, comment)
-		if err != nil {
-			return nil, err
-		}
-	case err != nil:
+	signer, err := loadManagerKey(path, comment)
+	if err != nil {
 		return nil, err
 	}
 	if err := writePublicKeyIfMissing(path+".pub", signer.PublicKey(), comment); err != nil {
 		return nil, err
 	}
 	return signer, nil
+}
+
+func loadManagerKey(path, comment string) (ssh.Signer, error) {
+	err := fsperm.CheckPrivateFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return createKey(path, comment)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("refusing to use the manager key: %w", err)
+	}
+	return loadKey(path)
 }
 
 // createKey generates a new ed25519 key and stores it in OpenSSH format
