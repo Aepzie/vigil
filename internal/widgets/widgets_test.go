@@ -340,6 +340,41 @@ func TestSparkline(t *testing.T) {
 	}
 }
 
+func TestSparklineRange(t *testing.T) {
+	c := theme.Default().P.Accent
+	inputs := [][]float64{nil, {1}, {0, 0}, {math.NaN(), -1, 5, math.Inf(1), math.Inf(-1)}, slicesRepeat(3, 300)}
+	for _, w := range testWidths {
+		for _, values := range inputs {
+			assertBlock(t, "SparklineRange", SparklineRange(values, w, 0, 10, c), w, 1)
+			assertBlock(t, "SparklineRange empty scale", SparklineRange(values, w, 5, 5, c), w, 1)
+			assertBlock(t, "SparklineRange inverted", SparklineRange(values, w, 10, 0, c), w, 1)
+		}
+	}
+	tests := []struct {
+		name   string
+		values []float64
+		width  int
+		lo, hi float64
+		want   string
+	}{
+		{"fixed scale is not stretched", []float64{9, 10, 9, 10}, 4, 0, 20, "▄▅▄▅"},
+		{"lo offset", []float64{10, 15, 20}, 3, 10, 20, "▁▅█"},
+		{"clamped outside the scale", []float64{-5, 30}, 2, 0, 10, "▁█"},
+		{"right-aligned with NaN gaps", []float64{0, math.NaN(), 8}, 5, 0, 8, "  ▁ █"},
+		{"newest values kept", []float64{8, 8, 0, 4}, 2, 0, 8, "▁▅"},
+		{"empty scale", []float64{3, 7}, 2, 5, 5, "▁▁"},
+	}
+	for _, tc := range tests {
+		got := SparklineRange(tc.values, tc.width, tc.lo, tc.hi, c)
+		if s := ansi.Strip(got); s != tc.want {
+			t.Errorf("%s: got %q, want %q", tc.name, s, tc.want)
+		}
+		if w := ansi.StringWidth(got); w != tc.width {
+			t.Errorf("%s: width %d, want %d", tc.name, w, tc.width)
+		}
+	}
+}
+
 func TestProgress(t *testing.T) {
 	th := theme.Default()
 	for _, w := range testWidths {

@@ -30,6 +30,36 @@ func Sparkline(values []float64, width int, max float64, c theme.RGB) string {
 			top = math.Max(top, positive(v))
 		}
 	}
+	return sparkline(values, width, c, func(v float64) float64 {
+		if top > 0 {
+			return positive(v) / top
+		}
+		return 0
+	})
+}
+
+// SparklineRange renders the last width values like Sparkline but on the
+// fixed scale lo..hi: lo draws the lowest bar ▁, hi and above the full
+// block █. A scale with hi ≤ lo draws every value as ▁. Output is exactly
+// width cells.
+func SparklineRange(values []float64, width int, lo, hi float64, c theme.RGB) string {
+	width = max0(width)
+	if width == 0 {
+		return ""
+	}
+	span := hi - lo
+	return sparkline(values, width, c, func(v float64) float64 {
+		if !(span > 0) || !finite(span) {
+			return 0
+		}
+		return (v - lo) / span
+	})
+}
+
+// sparkline draws the last width values right-aligned, mapping each
+// non-NaN value through frac to a fraction of the full bar height.
+func sparkline(values []float64, width int, c theme.RGB, frac func(float64) float64) string {
+	start := len(values) - width
 	dark := c.Darken(sparkDarken)
 	p := newPainter(width * 6)
 	for col := range width {
@@ -38,10 +68,7 @@ func Sparkline(values []float64, width int, max float64, c theme.RGB) string {
 			p.space()
 			continue
 		}
-		level := 0
-		if top > 0 {
-			level = int(math.Round(clamp01(positive(values[idx])/top) * 7))
-		}
+		level := int(math.Round(clamp01(frac(values[idx])) * 7))
 		p.fgCell(lowerBlocks[level+1], dark.Lerp(c, float64(level)/7))
 	}
 	return p.String()
