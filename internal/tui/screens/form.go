@@ -21,8 +21,8 @@ type formField struct {
 	err   string
 	// hidden fields are neither shown nor focused.
 	hidden bool
-	// disabled, when non-empty, is shown in place of the input; the
-	// field cannot be focused or edited.
+	// disabled, when non-empty, is shown in place of the input and the
+	// help; the field cannot be focused or edited.
 	disabled string
 }
 
@@ -202,7 +202,7 @@ func (f *form) View(t *theme.Theme, pw, ph int) string {
 		}
 		input := fl.input.View(t, inputW, focused)
 		if fl.disabled != "" {
-			input = t.P.Surface.BG() + widgets.FitLine(fg(t.P.Faint, fl.disabled), inputW) + theme.Reset
+			input = t.P.Surface.BG() + t.P.Faint.FG() + widgets.FitLine(fl.disabled, inputW) + theme.Reset
 		}
 		row := widgets.FitLine(fg(labelColor, label), lw-1) + " " + input
 		lines = append(lines, row)
@@ -210,6 +210,9 @@ func (f *form) View(t *theme.Theme, pw, ph int) string {
 			continue
 		}
 		note := fg(t.P.Faint, fl.help)
+		if fl.disabled != "" {
+			note = ""
+		}
 		if fl.err != "" {
 			note = fg(t.P.Bad, glyphCross+" "+fl.err)
 		}
