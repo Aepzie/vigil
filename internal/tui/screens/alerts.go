@@ -73,7 +73,7 @@ func newAlerts(d *ui.Deps) *alertsScreen {
 
 func (s *alertsScreen) Tab() ui.TabID   { return ui.TabAlerts }
 func (s *alertsScreen) Title() string   { return "Alerts" }
-func (s *alertsScreen) Icon() string    { return "⚡" }
+func (s *alertsScreen) Icon() string    { return glyphWarn }
 func (s *alertsScreen) Init() tea.Cmd   { return nil }
 func (s *alertsScreen) Capturing() bool { return false }
 
