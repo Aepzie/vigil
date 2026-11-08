@@ -61,7 +61,7 @@ arm64) are attached to every
 source archive and a SHA-256 checksum file. On Linux:
 
 ```bash
-VERSION=0.1.0
+VERSION=0.1.1
 curl -LO https://github.com/Aepzie/vigil/releases/download/v${VERSION}/vigil_${VERSION}_linux_amd64.tar.gz
 curl -LO https://github.com/Aepzie/vigil/releases/download/v${VERSION}/vigil_${VERSION}_checksums.txt
 sha256sum --ignore-missing -c vigil_${VERSION}_checksums.txt
