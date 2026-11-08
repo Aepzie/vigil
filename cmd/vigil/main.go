@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"runtime/debug"
 	"strings"
 )
@@ -91,15 +92,49 @@ func isHelp(arg string) bool {
 }
 
 // versionString returns the -ldflags version, else the module version
-// recorded by `go install`, else "dev".
+// recorded by `go install`, else "dev". Pseudo-versions stamped by local
+// builds (v0.0.0-20261108035403-65ac643cd3c8+dirty) are shortened to
+// "dev-65ac643" so they fit the dashboard header.
 func versionString() string {
 	if version != "dev" && version != "" {
 		return version
 	}
-	if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" && bi.Main.Version != "(devel)" {
-		return bi.Main.Version
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "dev"
 	}
-	return "dev"
+	return buildVersion(bi.Main.Version, bi.Settings)
+}
+
+var pseudoVersion = regexp.MustCompile(`(^|[.-])\d{14}-([0-9a-f]{12})(\+dirty)?$`)
+
+// buildVersion derives a display version from build info.
+func buildVersion(modVersion string, settings []debug.BuildSetting) string {
+	if modVersion != "" && modVersion != "(devel)" && !pseudoVersion.MatchString(modVersion) {
+		return modVersion
+	}
+	rev, dirty := "", false
+	for _, s := range settings {
+		switch s.Key {
+		case "vcs.revision":
+			rev = s.Value
+		case "vcs.modified":
+			dirty = s.Value == "true"
+		}
+	}
+	if rev == "" {
+		if m := pseudoVersion.FindStringSubmatch(modVersion); m != nil {
+			rev, dirty = m[2], m[3] != ""
+		}
+	}
+	if rev == "" {
+		return "dev"
+	}
+	v := "dev-" + rev[:min(7, len(rev))]
+	if dirty {
+		v += "+dirty"
+	}
+	return v
 }
 
 // newFlagSet creates a flag set that reports errors instead of exiting.
