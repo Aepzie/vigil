@@ -2,6 +2,7 @@ package screens
 
 import (
 	"cmp"
+	"math"
 	"slices"
 	"strconv"
 	"strings"
@@ -251,6 +252,62 @@ func sumSeries(a, b []float64) []float64 {
 		}
 		if j := len(b) - n + i; j >= 0 {
 			out[i] += b[j]
+		}
+	}
+	return out
+}
+
+// meanSeries averages series element-wise, aligned at their newest value.
+// Each point is the mean of the series that have a non-NaN value there,
+// so a series with a shorter history does not drag older points down.
+// Points without any value are NaN.
+func meanSeries(all ...[]float64) []float64 {
+	n := 0
+	for _, s := range all {
+		n = max(n, len(s))
+	}
+	out := make([]float64, n)
+	for i := range n {
+		sum, count := 0.0, 0
+		for _, s := range all {
+			j := len(s) - n + i
+			if j < 0 || math.IsNaN(s[j]) {
+				continue
+			}
+			sum += s[j]
+			count++
+		}
+		out[i] = math.NaN()
+		if count > 0 {
+			out[i] = sum / float64(count)
+		}
+	}
+	return out
+}
+
+// resample shrinks values to at most n points by averaging consecutive
+// buckets of nearly equal size, ignoring NaN; a bucket of only NaN stays
+// NaN. Values that already fit are returned unchanged.
+func resample(values []float64, n int) []float64 {
+	if n <= 0 {
+		return nil
+	}
+	if len(values) <= n {
+		return values
+	}
+	out := make([]float64, n)
+	for c := range out {
+		lo, hi := c*len(values)/n, (c+1)*len(values)/n
+		sum, count := 0.0, 0
+		for _, v := range values[lo:hi] {
+			if !math.IsNaN(v) {
+				sum += v
+				count++
+			}
+		}
+		out[c] = math.NaN()
+		if count > 0 {
+			out[c] = sum / float64(count)
 		}
 	}
 	return out
