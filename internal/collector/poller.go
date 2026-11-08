@@ -9,9 +9,9 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/CraguS/vigil/internal/metrics"
-	"github.com/CraguS/vigil/internal/sshclient"
-	"github.com/CraguS/vigil/internal/store"
+	"github.com/Aepzie/vigil/internal/metrics"
+	"github.com/Aepzie/vigil/internal/sshclient"
+	"github.com/Aepzie/vigil/internal/store"
 )
 
 // poller polls one server on its own goroutine. Everything below the

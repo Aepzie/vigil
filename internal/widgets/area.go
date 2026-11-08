@@ -3,7 +3,7 @@ package widgets
 import (
 	"math"
 
-	"github.com/CraguS/vigil/internal/theme"
+	"github.com/Aepzie/vigil/internal/theme"
 )
 
 // lowerBlocks indexes the lower eighth blocks by filled eighths (0..8).

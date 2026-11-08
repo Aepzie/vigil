@@ -3,7 +3,7 @@
 // ui.FleetMsg and talks to the app shell only through ui messages.
 package screens
 
-import "github.com/CraguS/vigil/internal/tui/ui"
+import "github.com/Aepzie/vigil/internal/tui/ui"
 
 // NewOverview lists all servers as a table or tiles.
 func NewOverview(d *ui.Deps) ui.Screen { return newOverview(d) }

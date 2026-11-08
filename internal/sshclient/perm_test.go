@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/CraguS/vigil/internal/fsperm"
+	"github.com/Aepzie/vigil/internal/fsperm"
 )
 
 func TestNewDialerRefusesExposedManagerKey(t *testing.T) {

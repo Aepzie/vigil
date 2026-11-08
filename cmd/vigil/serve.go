@@ -17,10 +17,10 @@ import (
 	"github.com/charmbracelet/x/term"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/CraguS/vigil/internal/auth"
-	"github.com/CraguS/vigil/internal/fsperm"
-	"github.com/CraguS/vigil/internal/server"
-	"github.com/CraguS/vigil/internal/theme"
+	"github.com/Aepzie/vigil/internal/auth"
+	"github.com/Aepzie/vigil/internal/fsperm"
+	"github.com/Aepzie/vigil/internal/server"
+	"github.com/Aepzie/vigil/internal/theme"
 )
 
 // Defaults of `vigil serve`.

@@ -16,8 +16,8 @@ import (
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
 
-	"github.com/CraguS/vigil/internal/sshclient/sshtest"
-	"github.com/CraguS/vigil/internal/store"
+	"github.com/Aepzie/vigil/internal/sshclient/sshtest"
+	"github.com/Aepzie/vigil/internal/store"
 )
 
 func newTestDialer(t *testing.T) (*Dialer, string) {

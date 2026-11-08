@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/CraguS/vigil/internal/metrics"
+	"github.com/Aepzie/vigil/internal/metrics"
 )
 
 func approx(a, b float64) bool { return math.Abs(a-b) < 1e-6 }

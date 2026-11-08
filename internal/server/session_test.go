@@ -12,7 +12,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/ssh"
 
-	"github.com/CraguS/vigil/internal/store"
+	"github.com/Aepzie/vigil/internal/store"
 )
 
 type readResult struct {

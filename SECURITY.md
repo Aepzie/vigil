@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please report vulnerabilities privately through GitHub's
-[private vulnerability reporting](https://github.com/CraguS/vigil/security/advisories/new)
+[private vulnerability reporting](https://github.com/Aepzie/vigil/security/advisories/new)
 ("Report a vulnerability" on the Security tab). Do not open a public
 issue.
 

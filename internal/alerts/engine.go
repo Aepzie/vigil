@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/CraguS/vigil/internal/metrics"
+	"github.com/Aepzie/vigil/internal/metrics"
 )
 
 const (

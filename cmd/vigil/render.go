@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/CraguS/vigil/internal/compat"
-	"github.com/CraguS/vigil/internal/svgshot"
-	"github.com/CraguS/vigil/internal/theme"
-	"github.com/CraguS/vigil/internal/tui"
-	"github.com/CraguS/vigil/internal/tui/ui"
+	"github.com/Aepzie/vigil/internal/compat"
+	"github.com/Aepzie/vigil/internal/svgshot"
+	"github.com/Aepzie/vigil/internal/theme"
+	"github.com/Aepzie/vigil/internal/tui"
+	"github.com/Aepzie/vigil/internal/tui/ui"
 )
 
 // Frame size limits of `vigil render`.

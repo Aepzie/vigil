@@ -6,8 +6,8 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/CraguS/vigil/internal/tui/ui"
-	"github.com/CraguS/vigil/internal/widgets"
+	"github.com/Aepzie/vigil/internal/tui/ui"
+	"github.com/Aepzie/vigil/internal/widgets"
 )
 
 // renderTabs draws row 2: "1 ◉ Overview" per screen with the active tab

@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/CraguS/vigil/internal/metrics"
-	"github.com/CraguS/vigil/internal/sanitize"
+	"github.com/Aepzie/vigil/internal/metrics"
+	"github.com/Aepzie/vigil/internal/sanitize"
 )
 
 // Bounds applied to untrusted remote output.

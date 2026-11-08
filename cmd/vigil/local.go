@@ -13,13 +13,13 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/term"
 
-	"github.com/CraguS/vigil/internal/compat"
-	"github.com/CraguS/vigil/internal/sanitize"
-	"github.com/CraguS/vigil/internal/sshclient"
-	"github.com/CraguS/vigil/internal/store"
-	"github.com/CraguS/vigil/internal/theme"
-	"github.com/CraguS/vigil/internal/tui"
-	"github.com/CraguS/vigil/internal/tui/ui"
+	"github.com/Aepzie/vigil/internal/compat"
+	"github.com/Aepzie/vigil/internal/sanitize"
+	"github.com/Aepzie/vigil/internal/sshclient"
+	"github.com/Aepzie/vigil/internal/store"
+	"github.com/Aepzie/vigil/internal/theme"
+	"github.com/Aepzie/vigil/internal/tui"
+	"github.com/Aepzie/vigil/internal/tui/ui"
 )
 
 // localResizePoll is how often the terminal size is checked while a

@@ -8,7 +8,7 @@ what vigil is and how to run it.
 You need Go 1.26 or newer. `make` is optional but convenient.
 
 ```bash
-git clone https://github.com/CraguS/vigil
+git clone https://github.com/Aepzie/vigil
 cd vigil
 make test        # go test ./...
 make run-demo    # the dashboard with a synthetic fleet, no servers needed

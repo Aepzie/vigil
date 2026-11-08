@@ -5,8 +5,8 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/CraguS/vigil/internal/theme"
-	"github.com/CraguS/vigil/internal/widgets"
+	"github.com/Aepzie/vigil/internal/theme"
+	"github.com/Aepzie/vigil/internal/widgets"
 )
 
 // sgrReset is the reset sequence lipgloss emits after styled runs.

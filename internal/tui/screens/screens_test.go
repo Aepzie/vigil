@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/CraguS/vigil/internal/tui/ui"
+	"github.com/Aepzie/vigil/internal/tui/ui"
 )
 
 var testSizes = [][2]int{{80, 21}, {150, 41}, {220, 57}, {40, 10}, {1, 1}, {12, 3}, {0, 0}}

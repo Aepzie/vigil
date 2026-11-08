@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/CraguS/vigil/internal/format"
-	"github.com/CraguS/vigil/internal/theme"
+	"github.com/Aepzie/vigil/internal/format"
+	"github.com/Aepzie/vigil/internal/theme"
 	"github.com/charmbracelet/x/ansi"
 )
 

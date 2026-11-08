@@ -1,4 +1,4 @@
-module github.com/CraguS/vigil
+module github.com/Aepzie/vigil
 
 go 1.26.8
 

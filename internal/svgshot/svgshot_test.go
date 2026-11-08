@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/CraguS/vigil/internal/theme"
+	"github.com/Aepzie/vigil/internal/theme"
 )
 
 // element is a decoded SVG element with its attributes and text.

@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/CraguS/vigil/internal/store"
-	"github.com/CraguS/vigil/internal/tui/ui"
+	"github.com/Aepzie/vigil/internal/store"
+	"github.com/Aepzie/vigil/internal/tui/ui"
 )
 
 func newTestSettings(t *testing.T) *settingsScreen {

@@ -4,7 +4,7 @@ import (
 	"math"
 	"strings"
 
-	"github.com/CraguS/vigil/internal/theme"
+	"github.com/Aepzie/vigil/internal/theme"
 )
 
 // painter writes cells with raw SGR sequences, emitting a color change

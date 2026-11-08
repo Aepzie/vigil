@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/CraguS/vigil/internal/compat"
+	"github.com/Aepzie/vigil/internal/compat"
 )
 
 func TestFailureLimiter(t *testing.T) {

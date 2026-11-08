@@ -12,8 +12,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/CraguS/vigil/internal/sshclient/sshtest"
-	"github.com/CraguS/vigil/internal/store"
+	"github.com/Aepzie/vigil/internal/sshclient/sshtest"
+	"github.com/Aepzie/vigil/internal/store"
 )
 
 var _ tea.ExecCommand = (*Shell)(nil)

@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/CraguS/vigil/internal/alerts"
-	"github.com/CraguS/vigil/internal/collector"
-	"github.com/CraguS/vigil/internal/metrics"
-	"github.com/CraguS/vigil/internal/store"
+	"github.com/Aepzie/vigil/internal/alerts"
+	"github.com/Aepzie/vigil/internal/collector"
+	"github.com/Aepzie/vigil/internal/metrics"
+	"github.com/Aepzie/vigil/internal/store"
 )
 
 var _ collector.Source = (*Source)(nil)
