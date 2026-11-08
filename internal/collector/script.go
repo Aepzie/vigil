@@ -144,6 +144,11 @@ type sample struct {
 	osName   string
 	system   string
 	kernel   string
+
+	// procsTruncated marks procs as partial: the host listed more than
+	// maxProcRecords processes and only the first ones were kept. CPU
+	// rates of the kept processes stay correct.
+	procsTruncated bool
 }
 
 // parseSample parses the output of pollScript(nonce). It fails only when

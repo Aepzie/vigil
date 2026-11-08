@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 	"time"
 
@@ -14,11 +13,6 @@ import (
 	"github.com/CraguS/vigil/internal/sshclient"
 	"github.com/CraguS/vigil/internal/store"
 )
-
-// maxOutput bounds the poll script output read from a server.
-const maxOutput = 4 << 20
-
-var errOutputTooLarge = fmt.Errorf("output larger than %d bytes", maxOutput)
 
 // poller polls one server on its own goroutine. Everything below the
 // marked line is owned by that goroutine and needs no locking.
@@ -137,7 +131,7 @@ func (p *poller) collect(forced bool) (metrics.Snapshot, error) {
 	defer cancel()
 	stop := context.AfterFunc(ctx, func() { client.Close() })
 	nonce := newNonce()
-	latency, out, err := exchange(client, pollScript(nonce))
+	latency, out, err := exchange(client, nonce)
 	if !stop() {
 		err = ctx.Err()
 	}
@@ -145,10 +139,11 @@ func (p *poller) collect(forced bool) (metrics.Snapshot, error) {
 		p.disconnect(err)
 		return metrics.Snapshot{}, err
 	}
-	cur, err := parseSample(string(out), nonce, time.Now())
+	cur, err := parseSample(out.text, nonce, time.Now())
 	if err != nil {
 		return metrics.Snapshot{}, err
 	}
+	cur.procsTruncated = out.procsTruncated
 	snap := buildSnapshot(p.id, cur, p.prev, latency)
 	p.prev = cur
 	p.lastSeen = snap.At
@@ -202,46 +197,44 @@ func (p *poller) offline(err error) metrics.Snapshot {
 }
 
 // exchange measures the round trip of an OpenSSH keepalive request and
-// then runs the poll script. Blocking calls are interrupted by closing
+// then runs pollScript(nonce). Blocking calls are interrupted by closing
 // the client.
-func exchange(client *ssh.Client, script string) (time.Duration, []byte, error) {
+func exchange(client *ssh.Client, nonce string) (time.Duration, pollOutput, error) {
 	start := time.Now()
 	if _, _, err := client.SendRequest("keepalive@openssh.com", true, nil); err != nil {
-		return 0, nil, fmt.Errorf("keepalive: %w", err)
+		return 0, pollOutput{}, fmt.Errorf("keepalive: %w", err)
 	}
 	latency := time.Since(start)
-	out, err := runScript(client, script)
+	out, err := runScript(client, nonce)
 	return latency, out, err
 }
 
-// runScript executes the script with remoteCommand in a new session and
-// returns at most maxOutput bytes of stdout. The script's exit status is
-// irrelevant; completeness is checked by the parser.
-func runScript(client *ssh.Client, script string) ([]byte, error) {
+// runScript executes pollScript(nonce) with remoteCommand in a new
+// session and reads its stdout with the bounds of readOutput. The
+// script's exit status is irrelevant; completeness is checked by the
+// parser.
+func runScript(client *ssh.Client, nonce string) (pollOutput, error) {
 	sess, err := client.NewSession()
 	if err != nil {
-		return nil, fmt.Errorf("open session: %w", err)
+		return pollOutput{}, fmt.Errorf("open session: %w", err)
 	}
 	defer sess.Close()
-	sess.Stdin = strings.NewReader(script)
+	sess.Stdin = strings.NewReader(pollScript(nonce))
 	stdout, err := sess.StdoutPipe()
 	if err != nil {
-		return nil, fmt.Errorf("stdout pipe: %w", err)
+		return pollOutput{}, fmt.Errorf("stdout pipe: %w", err)
 	}
 	if err := sess.Start(remoteCommand); err != nil {
-		return nil, fmt.Errorf("exec: %w", err)
+		return pollOutput{}, fmt.Errorf("exec: %w", err)
 	}
-	out, err := io.ReadAll(io.LimitReader(stdout, maxOutput+1))
+	out, err := readOutput(stdout, nonce)
 	if err != nil {
-		return nil, fmt.Errorf("read output: %w", err)
-	}
-	if len(out) > maxOutput {
-		return nil, errOutputTooLarge
+		return pollOutput{}, fmt.Errorf("read output: %w", err)
 	}
 	var exitErr *ssh.ExitError
 	var missing *ssh.ExitMissingError
 	if err := sess.Wait(); err != nil && !errors.As(err, &exitErr) && !errors.As(err, &missing) {
-		return nil, fmt.Errorf("exec: %w", err)
+		return pollOutput{}, fmt.Errorf("exec: %w", err)
 	}
 	return out, nil
 }

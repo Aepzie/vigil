@@ -22,9 +22,12 @@
 // Sending the script on stdin makes it independent of the user's login
 // shell; the random per-poll nonce keeps remote content such as process
 // names from forging sections, and a trailing "end" section detects
-// truncated output. Output is capped at 4 MiB and every poll is bounded
-// by a timeout of twice the interval (5s to 15s); on timeout the client
-// is closed, which unblocks any pending I/O.
+// truncated output. Output is read as a stream: at most 32768 process
+// records are kept (the rest is discarded and the list marked partial,
+// so busy hosts still report everything else), all other output is
+// capped at 4 MiB, and every poll is bounded by a timeout of twice the
+// interval (5s to 15s); on timeout the client is closed, which unblocks
+// any pending I/O.
 //
 // # Rates
 //
