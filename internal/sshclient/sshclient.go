@@ -64,6 +64,20 @@ func (d *Dialer) PublicKey() string {
 // ErrHostKeyMismatch. Without a deadline on ctx, DefaultDialTimeout
 // applies. Errors are *DialError values classified by the Err* variables.
 func (d *Dialer) Dial(ctx context.Context, srv store.Server) (*ssh.Client, error) {
+	return d.connect(ctx, srv, func() ([]ssh.AuthMethod, error) {
+		signer, err := d.signerFor(srv)
+		if err != nil {
+			return nil, err
+		}
+		return []ssh.AuthMethod{ssh.PublicKeys(signer)}, nil
+	})
+}
+
+// connect dials srv and authenticates with the methods returned by auth,
+// which is called after the server's address and user were checked. Host
+// keys are verified as described for Dial, and errors are *DialError
+// values.
+func (d *Dialer) connect(ctx context.Context, srv store.Server, auth func() ([]ssh.AuthMethod, error)) (*ssh.Client, error) {
 	addr := serverAddr(srv)
 	fail := func(err error) error {
 		return &DialError{User: srv.User, Addr: addr, Kind: classify(err), Err: err}
@@ -74,7 +88,7 @@ func (d *Dialer) Dial(ctx context.Context, srv store.Server) (*ssh.Client, error
 	if srv.User == "" {
 		return nil, fail(errors.New("no user configured"))
 	}
-	signer, err := d.signerFor(srv)
+	methods, err := auth()
 	if err != nil {
 		return nil, fail(err)
 	}
@@ -98,7 +112,7 @@ func (d *Dialer) Dial(ctx context.Context, srv store.Server) (*ssh.Client, error
 
 	cfg := &ssh.ClientConfig{
 		User:              srv.User,
-		Auth:              []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		Auth:              methods,
 		HostKeyCallback:   d.hosts.check,
 		HostKeyAlgorithms: d.hosts.algorithms(addr, conn.RemoteAddr()),
 		ClientVersion:     "SSH-2.0-vigil",

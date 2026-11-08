@@ -1,11 +1,13 @@
 package screens
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -21,8 +23,20 @@ const (
 	fieldHost
 	fieldPort
 	fieldUser
+	fieldPassword
 	fieldKey
 	fieldTags
+)
+
+// installKeyTimeout bounds one key installation (password login, remote
+// command and key login check).
+const installKeyTimeout = 30 * time.Second
+
+// Texts of the password field.
+const (
+	passwordHelp     = "optional · used once to add the key, never stored"
+	passwordDisabled = "not used with a custom SSH key; install it manually"
+	installMissing   = "key install is not available in this session"
 )
 
 // Servers layout constants.
@@ -62,6 +76,17 @@ type serverSavedMsg struct {
 	err    error
 	// seq identifies the form that started the save (serverForm.seq).
 	seq int
+	// install installs the manager key on the saved server; it is nil
+	// unless a password was entered. The password lives only in its
+	// closure, never in the model.
+	install tea.Cmd
+}
+
+// keyInstalledMsg is the result of a key installation.
+type keyInstalledMsg struct {
+	id   string
+	name string
+	err  error
 }
 
 // serverDeletedMsg is the result of a delete.
@@ -79,6 +104,7 @@ const (
 	serversEdit
 	serversDelete
 	serversTest
+	serversInstallKey
 )
 
 // serversActionMsg carries a palette command back into Update.
@@ -94,6 +120,12 @@ type serverForm struct {
 	seq int
 }
 
+// keyPrompt asks for the password that installs the manager key on srv.
+type keyPrompt struct {
+	form
+	srv store.Server
+}
+
 // servers manages the inventory.
 type servers struct {
 	d        *ui.Deps
@@ -102,6 +134,7 @@ type servers struct {
 	selected string
 	form     *serverForm
 	confirm  *confirmDialog
+	prompt   *keyPrompt
 	// formSeq numbers the forms opened so far.
 	formSeq int
 }
@@ -114,7 +147,16 @@ func (s *servers) Tab() ui.TabID   { return ui.TabServers }
 func (s *servers) Title() string   { return "Servers" }
 func (s *servers) Icon() string    { return "≡" }
 func (s *servers) Init() tea.Cmd   { return nil }
-func (s *servers) Capturing() bool { return s.form != nil || s.confirm != nil }
+func (s *servers) Capturing() bool { return s.form != nil || s.confirm != nil || s.prompt != nil }
+
+// installKey returns the key installer of the session, or nil when keys
+// cannot be installed (no dialer, read-only session).
+func (s *servers) installKey() ui.InstallKeyFunc {
+	if s.d == nil || s.d.ReadOnly {
+		return nil
+	}
+	return s.d.InstallKey
+}
 
 // rows are the servers sorted by name.
 func (s *servers) rows() []serverRow {
@@ -163,10 +205,10 @@ func (s *servers) Update(msg tea.Msg) (ui.Screen, tea.Cmd) {
 		return s, s.saved(msg)
 	case serverDeletedMsg:
 		return s, s.deleted(msg)
+	case keyInstalledMsg:
+		return s, s.keyInstalled(msg)
 	case tea.PasteMsg:
-		if s.form != nil {
-			s.form.Paste(msg.Content)
-		}
+		s.paste(msg.Content)
 	case tea.KeyPressMsg:
 		return s, s.key(msg)
 	}
@@ -186,13 +228,29 @@ func (s *servers) apply(a serversAction) tea.Cmd {
 		return s.openDelete()
 	case serversTest:
 		return s.testCmd()
+	case serversInstallKey:
+		return s.openKeyPrompt()
 	}
 	return nil
+}
+
+// paste inserts pasted text into the open prompt or form.
+func (s *servers) paste(text string) {
+	switch {
+	case s.prompt != nil:
+		s.prompt.Paste(text)
+	case s.form != nil:
+		s.form.Paste(text)
+		s.form.syncPassword()
+	}
 }
 
 func (s *servers) key(msg tea.KeyPressMsg) tea.Cmd {
 	if s.confirm != nil {
 		return s.confirmKey(msg)
+	}
+	if s.prompt != nil {
+		return s.promptKey(msg)
 	}
 	if s.form != nil {
 		return s.formKey(msg)
@@ -214,6 +272,8 @@ func (s *servers) key(msg tea.KeyPressMsg) tea.Cmd {
 		return s.openDelete()
 	case "t":
 		return s.testCmd()
+	case "p":
+		return s.openKeyPrompt()
 	case "enter":
 		if s.selected != "" {
 			return emit(ui.OpenShellMsg{ServerID: s.selected})
@@ -230,8 +290,9 @@ func (s *servers) testCmd() tea.Cmd {
 	return pollServer(s.d, s.fleet, s.selected)
 }
 
-// newServerForm builds the form, prefilled from srv.
-func newServerForm(title string, srv store.Server) *serverForm {
+// newServerForm builds the form, prefilled from srv. The password field
+// is shown only when canInstall.
+func newServerForm(title string, srv store.Server, canInstall bool) *serverForm {
 	field := func(label, placeholder, help, value string) formField {
 		in := newInput(placeholder)
 		in.SetValue(value)
@@ -241,20 +302,39 @@ func newServerForm(title string, srv store.Server) *serverForm {
 	if srv.Port != 0 {
 		port = strconv.Itoa(srv.Port)
 	}
-	return &serverForm{
+	f := &serverForm{
 		orig: srv,
 		form: form{
 			title: title,
 			fields: []formField{
-				fieldName: field("Name", "e.g. web-01", "a short unique label", srv.Name),
-				fieldHost: field("Host/IP", "e.g. 10.0.0.12 or web.example.com", "hostname, IPv4 or IPv6 address", srv.Host),
-				fieldPort: field("Port", "22", "SSH port, default 22", port),
-				fieldUser: field("User", "e.g. ubuntu", "remote login user", srv.User),
-				fieldKey:  field("SSH key", "manager key (or file name in <data>/keys)", "optional private key file name in <data>/keys", srv.KeyPath),
-				fieldTags: field("Tags", "prod, web", "comma separated", strings.Join(srv.Tags, ", ")),
+				fieldName:     field("Name", "e.g. web-01", "a short unique label", srv.Name),
+				fieldHost:     field("Host/IP", "e.g. 10.0.0.12 or web.example.com", "hostname, IPv4 or IPv6 address", srv.Host),
+				fieldPort:     field("Port", "22", "SSH port, default 22", port),
+				fieldUser:     field("User", "e.g. ubuntu", "remote login user", srv.User),
+				fieldPassword: {label: "Password", help: passwordHelp, input: newMaskedInput("optional"), hidden: !canInstall},
+				fieldKey:      field("SSH key", "manager key (or file name in <data>/keys)", "optional private key file name in <data>/keys", srv.KeyPath),
+				fieldTags:     field("Tags", "prod, web", "comma separated", strings.Join(srv.Tags, ", ")),
 			},
 		},
 	}
+	f.syncPassword()
+	return f
+}
+
+// syncPassword disables the password field while a per-server key is
+// set: only the manager key can be installed.
+func (f *serverForm) syncPassword() {
+	f.fields[fieldPassword].disabled = ""
+	if f.Value(fieldKey) != "" {
+		f.fields[fieldPassword].disabled = passwordDisabled
+	}
+}
+
+// takePassword returns the entered password and clears the field.
+func (f *serverForm) takePassword() string {
+	password := f.fields[fieldPassword].input.Value()
+	f.fields[fieldPassword].input.Clear()
+	return password
 }
 
 func (s *servers) openAdd() tea.Cmd {
@@ -264,7 +344,7 @@ func (s *servers) openAdd() tea.Cmd {
 	if limit := s.maxServers(); limit > 0 && len(s.fleet.Servers) >= limit {
 		return ui.Toast(theme.ToneWarn, serverLimitError(limit).Error())
 	}
-	s.openForm(newServerForm("Add server", store.Server{}))
+	s.openForm(newServerForm("Add server", store.Server{}, s.installKey() != nil))
 	return nil
 }
 
@@ -276,7 +356,7 @@ func (s *servers) openEdit() tea.Cmd {
 	if !ok {
 		return nil
 	}
-	s.openForm(newServerForm("Edit "+clean(srv.Name), srv))
+	s.openForm(newServerForm("Edit "+clean(srv.Name), srv, s.installKey() != nil))
 	return nil
 }
 
@@ -341,14 +421,19 @@ func (s *servers) formKey(msg tea.KeyPressMsg) tea.Cmd {
 	}
 	switch s.form.Update(msg) {
 	case formCancel:
+		s.form.takePassword()
 		s.form = nil
 	case formSubmit:
 		return s.submit()
+	default:
+		s.form.syncPassword()
 	}
 	return nil
 }
 
-// submit parses the form locally and starts the store write.
+// submit parses the form locally and starts the store write. When a
+// password was entered, the manager key is installed after a successful
+// save; the password leaves the model as soon as that command exists.
 func (s *servers) submit() tea.Cmd {
 	f := s.form
 	f.clearErrors()
@@ -357,7 +442,118 @@ func (s *servers) submit() tea.Cmd {
 		return nil
 	}
 	f.busy = true
-	return saveServerCmd(s.d, srv, f.orig.ID != "", f.seq)
+	save := saveServerCmd(s.d, srv, f.orig.ID != "", f.seq)
+	password := f.takePassword()
+	install := s.installKey()
+	if password == "" || srv.KeyPath != "" || install == nil {
+		return save
+	}
+	return withKeyInstall(save, install, password)
+}
+
+// withKeyInstall makes a successful save result carry the command that
+// installs the manager key on the saved server.
+func withKeyInstall(save tea.Cmd, install ui.InstallKeyFunc, password string) tea.Cmd {
+	return func() tea.Msg {
+		msg := save()
+		saved, ok := msg.(serverSavedMsg)
+		if !ok || saved.err != nil {
+			return msg
+		}
+		saved.install = installKeyCmd(install, saved.srv, password)
+		return saved
+	}
+}
+
+// installKeyCmd installs the manager key on srv off the UI goroutine.
+func installKeyCmd(install ui.InstallKeyFunc, srv store.Server, password string) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), installKeyTimeout)
+		defer cancel()
+		return keyInstalledMsg{id: srv.ID, name: clean(srv.Name), err: install(ctx, srv, password)}
+	}
+}
+
+// installingToast announces a key installation on the server name.
+func installingToast(name string) tea.Cmd {
+	return ui.Toast(theme.ToneInfo, "installing key on "+name+"…")
+}
+
+// openKeyPrompt asks for the password that installs the manager key on
+// the selected server.
+func (s *servers) openKeyPrompt() tea.Cmd {
+	if isReadOnly(s.d) {
+		return refuseReadOnly()
+	}
+	srv, ok := s.selectedServer()
+	if !ok {
+		return nil
+	}
+	if s.installKey() == nil {
+		return ui.Toast(theme.ToneWarn, installMissing)
+	}
+	if srv.KeyPath != "" {
+		return ui.Toast(theme.ToneWarn, clean(srv.Name)+" uses a custom key; install it manually")
+	}
+	s.prompt = &keyPrompt{
+		srv: srv,
+		form: form{
+			title: "Install manager key on " + clean(srv.Name),
+			keys:  "enter install · esc cancel",
+			fields: []formField{{
+				label: "Password",
+				help:  "of " + clean(srv.User) + " · used once, never stored",
+				input: newMaskedInput("SSH password"),
+			}},
+		},
+	}
+	return nil
+}
+
+// promptKey handles a key press while the password prompt is open.
+func (s *servers) promptKey(msg tea.KeyPressMsg) tea.Cmd {
+	p := s.prompt
+	switch p.Update(msg) {
+	case formCancel:
+		p.fields[0].input.Clear()
+		s.prompt = nil
+	case formSubmit:
+		password := p.fields[0].input.Value()
+		p.fields[0].input.Clear()
+		if password == "" {
+			p.fail(0, "required")
+			return nil
+		}
+		s.prompt = nil
+		install := s.installKey()
+		if install == nil {
+			return ui.Toast(theme.ToneWarn, installMissing)
+		}
+		return tea.Batch(installingToast(clean(p.srv.Name)), installKeyCmd(install, p.srv, password))
+	}
+	return nil
+}
+
+// keyInstalled reports the result of installKeyCmd and polls the server.
+func (s *servers) keyInstalled(msg keyInstalledMsg) tea.Cmd {
+	toast := ui.Toast(theme.ToneGood, "key installed on "+msg.name)
+	if msg.err != nil {
+		toast = ui.Toast(theme.ToneBad, "key install on "+msg.name+" failed: "+clean(msg.err.Error()))
+	}
+	return tea.Batch(toast, pollNowCmd(s.d, msg.id))
+}
+
+// pollNowCmd polls server id right away; it is nil when polling is not
+// available.
+func pollNowCmd(d *ui.Deps, id string) tea.Cmd {
+	if d == nil || d.PollNow == nil || id == "" {
+		return nil
+	}
+	poll := d.PollNow
+	return func() tea.Msg {
+		poll(id)
+		return nil
+	}
 }
 
 // parseServerForm converts the form into a server, recording field errors
@@ -485,10 +681,9 @@ func (s *servers) saved(msg serverSavedMsg) tea.Cmd {
 	if msg.edited {
 		verb = "Updated "
 	}
-	cmds := []tea.Cmd{ui.Toast(theme.ToneGood, verb+clean(msg.srv.Name)), ui.Refresh}
-	if s.d != nil && s.d.PollNow != nil && msg.srv.ID != "" {
-		poll, id := s.d.PollNow, msg.srv.ID
-		cmds = append(cmds, func() tea.Msg { poll(id); return nil })
+	cmds := []tea.Cmd{ui.Toast(theme.ToneGood, verb+clean(msg.srv.Name)), ui.Refresh, pollNowCmd(s.d, msg.srv.ID)}
+	if msg.install != nil {
+		cmds = append(cmds, installingToast(clean(msg.srv.Name)), msg.install)
 	}
 	return tea.Batch(cmds...)
 }
@@ -538,6 +733,8 @@ func (s *servers) Hints() []ui.Hint {
 	switch {
 	case s.confirm != nil:
 		return []ui.Hint{hint("y", "delete"), hint("n", "keep")}
+	case s.prompt != nil:
+		return []ui.Hint{hint("enter", "install"), hint("esc", "cancel")}
 	case s.form != nil:
 		return formHints()
 	case isReadOnly(s.d) && len(s.fleet.Servers) == 0:
@@ -547,10 +744,14 @@ func (s *servers) Hints() []ui.Hint {
 	case len(s.fleet.Servers) == 0:
 		return []ui.Hint{hint("a", "add server")}
 	default:
-		return []ui.Hint{
+		hints := []ui.Hint{
 			hint("j/k", "move"), hint("a", "add"), hint("e", "edit"), hint("x", "delete"),
 			hint("enter", "shell"), hint("t", "test"), hint("d", "detail"),
 		}
+		if s.installKey() != nil {
+			hints = append(hints, hint("p", "install key"))
+		}
+		return hints
 	}
 }
 
@@ -563,12 +764,16 @@ func (s *servers) Commands() []ui.Command {
 	if isReadOnly(s.d) {
 		return []ui.Command{test}
 	}
-	return []ui.Command{
+	cmds := []ui.Command{
 		{Title: "Add server", Hint: "a", Run: act(serversAdd)},
 		{Title: "Edit selected server", Hint: "e", Run: act(serversEdit)},
 		{Title: "Delete selected server", Hint: "x", Run: act(serversDelete)},
 		test,
 	}
+	if srv, ok := s.selectedServer(); ok && srv.KeyPath == "" && s.installKey() != nil {
+		cmds = append(cmds, ui.Command{Title: "Install manager key on " + clean(srv.Name), Hint: "p", Run: act(serversInstallKey)})
+	}
+	return cmds
 }
 
 // View implements ui.Screen.
@@ -584,13 +789,16 @@ func (s *servers) View(width, height int) string {
 	case s.confirm != nil:
 		pw, ph := s.confirm.Size(width, height)
 		return overlayCentered(base, s.confirm.View(s.t, pw, ph), pw, ph, width, height)
+	case s.prompt != nil:
+		pw, ph := s.prompt.Size(width, height)
+		return overlayCentered(base, s.prompt.View(s.t, pw, ph), pw, ph, width, height)
 	}
 	return base
 }
 
 // inventory renders the table and the access hint panel.
 func (s *servers) inventory(w, h int) string {
-	focused := s.form == nil && s.confirm == nil
+	focused := !s.Capturing()
 	switch {
 	case w >= accessSideMinWidth:
 		tableW := w - accessPanelWidth - 1
@@ -682,11 +890,17 @@ func (s *servers) access(w, h int) string {
 	if key != "" {
 		keyLine = fg(t.P.Accent2, widgets.FitLine(key, iw))
 	}
-	intro := paint(t.P.Muted, wrapWords("vigil reads metrics over SSH, no agent needed. Add the manager public key to ~/.ssh/authorized_keys of each target user:", iw))
+	introText := "vigil reads metrics over SSH, no agent needed. Add the manager public key to ~/.ssh/authorized_keys of each target user:"
+	shortText := "Add the manager key to ~/.ssh/authorized_keys of each target user:"
+	if s.installKey() != nil {
+		introText = "vigil reads metrics over SSH, no agent needed. Press p to install the manager key with a one-time password, or add it to ~/.ssh/authorized_keys of each target user:"
+		shortText = "Press p to install the manager key with a password, or add it to ~/.ssh/authorized_keys:"
+	}
+	intro := paint(t.P.Muted, wrapWords(introText, iw))
 	outro := paint(t.P.Faint, wrapWords("A per-server SSH key (a file name in <data>/keys) overrides the manager key. The full key is shown in the Settings tab.", iw))
 	lines := append(append(intro, keyLine, ""), outro...)
 	if ih < len(lines) {
-		short := paint(t.P.Muted, wrapWords("Add the manager key to ~/.ssh/authorized_keys of each target user:", iw))
+		short := paint(t.P.Muted, wrapWords(shortText, iw))
 		lines = append(short, keyLine)
 		if ih > len(lines)+1 {
 			lines = append(lines, "", fg(t.P.Faint, "Full key in the Settings tab."))

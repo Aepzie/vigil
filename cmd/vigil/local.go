@@ -62,6 +62,7 @@ func cmdLocal(args []string, std stdio) error {
 		Source:     svc.hub,
 		Alerts:     svc.engine,
 		PollNow:    svc.hub.PollNow,
+		InstallKey: svc.dialer.InstallKey,
 		User:       localUser(),
 		Version:    versionString(),
 		StartedAt:  time.Now(),

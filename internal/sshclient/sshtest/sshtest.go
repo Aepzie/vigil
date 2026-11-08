@@ -1,14 +1,18 @@
 // Package sshtest provides an in-process SSH server for tests. It answers
 // exec requests through a callback, runs a tiny echoing line shell for
-// pty-req/shell sessions, and records PTY, window-change and env requests.
+// pty-req/shell sessions, records PTY, window-change and env requests, and
+// supports public key, password and keyboard-interactive authentication.
 package sshtest
 
 import (
 	"bytes"
 	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/subtle"
+	"errors"
 	"io"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -25,9 +29,21 @@ type ExecFunc func(command string, stdin io.Reader, stdout io.Writer) uint32
 type Options struct {
 	// HostKey is the server's host key; a fresh ed25519 key when nil.
 	HostKey ssh.Signer
-	// AuthorizedKeys restricts public key authentication; when empty any
-	// public key is accepted.
+	// AuthorizedKeys restricts public key authentication. When neither it
+	// nor AuthorizedKeysFile is set, any public key is accepted.
 	AuthorizedKeys []ssh.PublicKey
+	// AuthorizedKeysFile, when set, also accepts the keys listed in this
+	// OpenSSH authorized_keys file, which is re-read on every attempt (a
+	// missing file lists no keys).
+	AuthorizedKeysFile string
+	// Password, when non-empty, enables password authentication with
+	// this password.
+	Password string
+	// KeyboardInteractive, when non-empty, enables keyboard-interactive
+	// authentication: the server asks an echoed question, whose answer
+	// is ignored, and a non-echoed one that must be answered with this
+	// password.
+	KeyboardInteractive string
 	// Exec handles exec requests; when nil they exit with status 127.
 	Exec ExecFunc
 }
@@ -54,6 +70,7 @@ type Server struct {
 	resizes []Size
 	env     map[string]string
 	execs   []string
+	logins  int
 	closed  bool
 
 	wg sync.WaitGroup
@@ -148,6 +165,14 @@ func (s *Server) Execs() []string {
 	return append([]string(nil), s.execs...)
 }
 
+// PasswordAttempts returns how many password and keyboard-interactive
+// logins were attempted.
+func (s *Server) PasswordAttempts() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.logins
+}
+
 // Close stops the listener, closes all connections and waits for the
 // handlers to return.
 func (s *Server) Close() {
@@ -194,19 +219,74 @@ func (s *Server) serve() {
 func (s *Server) config() *ssh.ServerConfig {
 	cfg := &ssh.ServerConfig{
 		PublicKeyCallback: func(_ ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
-			if len(s.opts.AuthorizedKeys) == 0 {
+			if s.authorized(key) {
 				return &ssh.Permissions{}, nil
 			}
-			for _, k := range s.opts.AuthorizedKeys {
-				if bytes.Equal(k.Marshal(), key.Marshal()) {
-					return &ssh.Permissions{}, nil
-				}
-			}
-			return nil, io.EOF
+			return nil, errRejected
 		},
+	}
+	if s.opts.Password != "" {
+		cfg.PasswordCallback = func(_ ssh.ConnMetadata, password []byte) (*ssh.Permissions, error) {
+			s.countLogin()
+			if subtle.ConstantTimeCompare(password, []byte(s.opts.Password)) == 1 {
+				return &ssh.Permissions{}, nil
+			}
+			return nil, errRejected
+		}
+	}
+	if s.opts.KeyboardInteractive != "" {
+		cfg.KeyboardInteractiveCallback = func(_ ssh.ConnMetadata, challenge ssh.KeyboardInteractiveChallenge) (*ssh.Permissions, error) {
+			s.countLogin()
+			answers, err := challenge("vigil-test", "", []string{"Note (ignored): ", "Password: "}, []bool{true, false})
+			if err != nil {
+				return nil, err
+			}
+			if len(answers) == 2 && subtle.ConstantTimeCompare([]byte(answers[1]), []byte(s.opts.KeyboardInteractive)) == 1 {
+				return &ssh.Permissions{}, nil
+			}
+			return nil, errRejected
+		}
 	}
 	cfg.AddHostKey(s.HostKey())
 	return cfg
+}
+
+var errRejected = errors.New("sshtest: rejected")
+
+func (s *Server) countLogin() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.logins++
+}
+
+// authorized reports whether key may log in.
+func (s *Server) authorized(key ssh.PublicKey) bool {
+	if len(s.opts.AuthorizedKeys) == 0 && s.opts.AuthorizedKeysFile == "" {
+		return true
+	}
+	for _, k := range s.opts.AuthorizedKeys {
+		if bytes.Equal(k.Marshal(), key.Marshal()) {
+			return true
+		}
+	}
+	if s.opts.AuthorizedKeysFile == "" {
+		return false
+	}
+	rest, err := os.ReadFile(s.opts.AuthorizedKeysFile)
+	if err != nil {
+		return false
+	}
+	for len(rest) > 0 {
+		var listed ssh.PublicKey
+		listed, _, _, rest, err = ssh.ParseAuthorizedKey(rest)
+		if err != nil {
+			return false
+		}
+		if bytes.Equal(listed.Marshal(), key.Marshal()) {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Server) handleConn(conn net.Conn) {

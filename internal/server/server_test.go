@@ -432,6 +432,32 @@ func TestUIDepsReadOnlyWhenPublic(t *testing.T) {
 	}
 }
 
+func TestUIDepsInstallKey(t *testing.T) {
+	dialer, err := sshclient.NewDialer(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		public bool
+		dialer *sshclient.Dialer
+		want   bool
+	}{
+		{"with dialer", false, dialer, true},
+		{"without dialer", false, nil, false},
+		{"public", true, dialer, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &server{cfg: Config{Public: tt.public}, deps: Deps{Dialer: tt.dialer}}
+			d := s.uiDeps(namedSession{user: "admin"}, "xterm", newSession(80, 24, io.Discard))
+			if got := d.InstallKey != nil; got != tt.want {
+				t.Fatalf("InstallKey available = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func testHostKeyPEM(t *testing.T) []byte {
 	t.Helper()
 	_, priv, err := ed25519.GenerateKey(rand.Reader)

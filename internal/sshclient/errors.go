@@ -31,6 +31,20 @@ var (
 	// missing file, insecure permissions, symlink leaving the keys
 	// directory, unparsable key, ...) is deliberately not reported.
 	ErrKeyNotUsable = errors.New("key not usable")
+	// ErrPasswordRejected is the category of Dialer.InstallKey when the
+	// server refuses the password (or offers neither password nor
+	// keyboard-interactive login). It matches ErrAuthFailed as well.
+	ErrPasswordRejected = fmt.Errorf("password rejected: %w", ErrAuthFailed)
+)
+
+// Errors returned by Dialer.InstallKey besides *DialError values.
+var (
+	// ErrCustomKey means the server uses a per-server key
+	// (store.Server.KeyPath), which InstallKey cannot install.
+	ErrCustomKey = errors.New("server uses a custom key; install it manually")
+	// ErrKeyLoginFailed means the key was written to authorized_keys but
+	// logging in with it failed afterwards.
+	ErrKeyLoginFailed = errors.New("key written to authorized_keys, but key login failed")
 )
 
 // DialError describes why connecting to a server failed. Kind is one of
@@ -49,6 +63,8 @@ func (e *DialError) Error() string {
 		target = e.User + "@" + e.Addr
 	}
 	switch {
+	case errors.Is(e.Kind, ErrPasswordRejected):
+		return fmt.Sprintf("ssh %s: password rejected; check the password and that the server allows password or keyboard-interactive login", target)
 	case errors.Is(e.Kind, ErrAuthFailed):
 		return fmt.Sprintf("ssh %s: authentication failed; add the vigil public key to ~/.ssh/authorized_keys of %q on the server", target, e.User)
 	case errors.Is(e.Kind, ErrHostKeyMismatch):
@@ -120,6 +136,8 @@ func Reason(err error) string {
 		return ""
 	case errors.Is(err, ErrHostKeyMismatch):
 		return "host key mismatch!"
+	case errors.Is(err, ErrPasswordRejected):
+		return "password rejected"
 	case errors.Is(err, ErrAuthFailed):
 		return "auth failed"
 	case errors.Is(err, ErrKeyNotUsable):
