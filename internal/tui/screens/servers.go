@@ -2,6 +2,7 @@ package screens
 
 import (
 	"errors"
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -36,11 +37,31 @@ const (
 // errNoStore is reported when the session has no inventory store.
 var errNoStore = errors.New("no server store available")
 
+// errReadOnly is reported for mutations in a read-only session.
+var errReadOnly = errors.New(readOnlyNotice)
+
+// readOnlyNotice is the toast shown when a read-only session tries to
+// change shared state.
+const readOnlyNotice = "read-only demo"
+
+// isReadOnly reports whether the session must not change shared state.
+func isReadOnly(d *ui.Deps) bool { return d != nil && d.ReadOnly }
+
+// refuseReadOnly tells the user that a mutation is not allowed.
+func refuseReadOnly() tea.Cmd { return ui.Toast(theme.ToneWarn, readOnlyNotice) }
+
+// serverLimitError reports that the inventory is full.
+func serverLimitError(limit int) error {
+	return fmt.Errorf("server limit reached (%d)", limit)
+}
+
 // serverSavedMsg is the result of an add or update.
 type serverSavedMsg struct {
 	srv    store.Server
 	edited bool
 	err    error
+	// seq identifies the form that started the save (serverForm.seq).
+	seq int
 }
 
 // serverDeletedMsg is the result of a delete.
@@ -68,6 +89,9 @@ type serverForm struct {
 	form
 	// orig is the edited server; its ID is empty when adding.
 	orig store.Server
+	// seq tells save results of this form apart from those of forms
+	// closed while their save was in flight.
+	seq int
 }
 
 // servers manages the inventory.
@@ -78,6 +102,8 @@ type servers struct {
 	selected string
 	form     *serverForm
 	confirm  *confirmDialog
+	// formSeq numbers the forms opened so far.
+	formSeq int
 }
 
 func newServers(d *ui.Deps) *servers {
@@ -153,11 +179,11 @@ func (s *servers) apply(a serversAction) tea.Cmd {
 	}
 	switch a {
 	case serversAdd:
-		s.openAdd()
+		return s.openAdd()
 	case serversEdit:
-		s.openEdit()
+		return s.openEdit()
 	case serversDelete:
-		s.openDelete()
+		return s.openDelete()
 	case serversTest:
 		return s.testCmd()
 	}
@@ -181,11 +207,11 @@ func (s *servers) key(msg tea.KeyPressMsg) tea.Cmd {
 	case "G", "end":
 		s.move(len(s.fleet.Servers))
 	case "a":
-		s.openAdd()
+		return s.openAdd()
 	case "e":
-		s.openEdit()
+		return s.openEdit()
 	case "x", "delete":
-		s.openDelete()
+		return s.openDelete()
 	case "t":
 		return s.testCmd()
 	case "enter":
@@ -224,35 +250,65 @@ func newServerForm(title string, srv store.Server) *serverForm {
 				fieldHost: field("Host/IP", "e.g. 10.0.0.12 or web.example.com", "hostname, IPv4 or IPv6 address", srv.Host),
 				fieldPort: field("Port", "22", "SSH port, default 22", port),
 				fieldUser: field("User", "e.g. ubuntu", "remote login user", srv.User),
-				fieldKey:  field("SSH key path", "manager key", "optional private key on the manager", srv.KeyPath),
+				fieldKey:  field("SSH key", "manager key (or file name in <data>/keys)", "optional private key file name in <data>/keys", srv.KeyPath),
 				fieldTags: field("Tags", "prod, web", "comma separated", strings.Join(srv.Tags, ", ")),
 			},
 		},
 	}
 }
 
-func (s *servers) openAdd() {
-	s.form = newServerForm("Add server", store.Server{})
-}
-
-func (s *servers) openEdit() {
-	srv, ok := s.selectedServer()
-	if !ok {
-		return
+func (s *servers) openAdd() tea.Cmd {
+	if isReadOnly(s.d) {
+		return refuseReadOnly()
 	}
-	s.form = newServerForm("Edit "+clean(srv.Name), srv)
+	if limit := s.maxServers(); limit > 0 && len(s.fleet.Servers) >= limit {
+		return ui.Toast(theme.ToneWarn, serverLimitError(limit).Error())
+	}
+	s.openForm(newServerForm("Add server", store.Server{}))
+	return nil
 }
 
-func (s *servers) openDelete() {
+func (s *servers) openEdit() tea.Cmd {
+	if isReadOnly(s.d) {
+		return refuseReadOnly()
+	}
 	srv, ok := s.selectedServer()
 	if !ok {
-		return
+		return nil
+	}
+	s.openForm(newServerForm("Edit "+clean(srv.Name), srv))
+	return nil
+}
+
+// openForm shows f with a new sequence number.
+func (s *servers) openForm(f *serverForm) {
+	s.formSeq++
+	f.seq = s.formSeq
+	s.form = f
+}
+
+func (s *servers) openDelete() tea.Cmd {
+	if isReadOnly(s.d) {
+		return refuseReadOnly()
+	}
+	srv, ok := s.selectedServer()
+	if !ok {
+		return nil
 	}
 	s.confirm = &confirmDialog{
 		title:  "Delete server",
 		prompt: "Delete " + clean(srv.Name) + "? y/n",
 		target: srv.ID,
 	}
+	return nil
+}
+
+// maxServers is the inventory cap of the session, 0 for none.
+func (s *servers) maxServers() int {
+	if s.d == nil {
+		return 0
+	}
+	return s.d.MaxServers
 }
 
 func (s *servers) confirmKey(msg tea.KeyPressMsg) tea.Cmd {
@@ -301,7 +357,7 @@ func (s *servers) submit() tea.Cmd {
 		return nil
 	}
 	f.busy = true
-	return saveServerCmd(s.d, srv, f.orig.ID != "")
+	return saveServerCmd(s.d, srv, f.orig.ID != "", f.seq)
 }
 
 // parseServerForm converts the form into a server, recording field errors
@@ -350,25 +406,42 @@ func splitTags(raw string) []string {
 	return tags
 }
 
-// saveServerCmd validates and persists a server off the UI goroutine.
-func saveServerCmd(d *ui.Deps, srv store.Server, edited bool) tea.Cmd {
+// saveServerCmd validates and persists a server off the UI goroutine for
+// the form numbered seq. It refuses read-only sessions and additions
+// beyond d.MaxServers.
+func saveServerCmd(d *ui.Deps, srv store.Server, edited bool, seq int) tea.Cmd {
 	var st *store.Store
+	limit := 0
 	if d != nil {
-		st = d.Store
+		st, limit = d.Store, d.MaxServers
 	}
+	readOnly := isReadOnly(d)
 	return func() tea.Msg {
-		if st == nil {
-			return serverSavedMsg{srv: srv, edited: edited, err: errNoStore}
-		}
-		if err := srv.Validate(); err != nil {
-			return serverSavedMsg{srv: srv, edited: edited, err: err}
-		}
-		if edited {
-			return serverSavedMsg{srv: srv, edited: true, err: st.Update(srv)}
-		}
-		stored, err := st.Add(srv)
-		return serverSavedMsg{srv: stored, err: err}
+		msg := saveServer(st, srv, edited, limit, readOnly)
+		msg.seq = seq
+		return msg
 	}
+}
+
+// saveServer performs the store write of saveServerCmd.
+func saveServer(st *store.Store, srv store.Server, edited bool, limit int, readOnly bool) serverSavedMsg {
+	switch {
+	case readOnly:
+		return serverSavedMsg{srv: srv, edited: edited, err: errReadOnly}
+	case st == nil:
+		return serverSavedMsg{srv: srv, edited: edited, err: errNoStore}
+	}
+	if err := srv.Validate(); err != nil {
+		return serverSavedMsg{srv: srv, edited: edited, err: err}
+	}
+	if edited {
+		return serverSavedMsg{srv: srv, edited: true, err: st.Update(srv)}
+	}
+	if limit > 0 && len(st.Servers()) >= limit {
+		return serverSavedMsg{srv: srv, err: serverLimitError(limit)}
+	}
+	stored, err := st.Add(srv)
+	return serverSavedMsg{srv: stored, err: err}
 }
 
 // deleteServerCmd removes a server off the UI goroutine.
@@ -377,26 +450,37 @@ func deleteServerCmd(d *ui.Deps, id, name string) tea.Cmd {
 	if d != nil {
 		st = d.Store
 	}
+	readOnly := isReadOnly(d)
 	return func() tea.Msg {
-		if st == nil {
+		switch {
+		case readOnly:
+			return serverDeletedMsg{id: id, name: name, err: errReadOnly}
+		case st == nil:
 			return serverDeletedMsg{id: id, name: name, err: errNoStore}
 		}
 		return serverDeletedMsg{id: id, name: name, err: st.Delete(id)}
 	}
 }
 
-// saved handles the result of saveServerCmd.
+// saved handles the result of saveServerCmd. Results of a form that was
+// closed while saving only produce a toast (and a refresh on success); they
+// never touch a form opened since.
 func (s *servers) saved(msg serverSavedMsg) tea.Cmd {
+	current := s.form != nil && s.form.seq == msg.seq
 	if msg.err != nil {
-		if s.form != nil {
+		if current {
 			s.form.busy = false
 			s.showSaveError(msg.err)
 			return nil
 		}
 		return ui.Toast(theme.ToneBad, "Save failed: "+clean(msg.err.Error()))
 	}
-	s.form = nil
-	s.selected = msg.srv.ID
+	if current {
+		s.form = nil
+	}
+	if s.form == nil {
+		s.selected = msg.srv.ID
+	}
 	verb := "Added "
 	if msg.edited {
 		verb = "Updated "
@@ -456,6 +540,10 @@ func (s *servers) Hints() []ui.Hint {
 		return []ui.Hint{hint("y", "delete"), hint("n", "keep")}
 	case s.form != nil:
 		return formHints()
+	case isReadOnly(s.d) && len(s.fleet.Servers) == 0:
+		return nil
+	case isReadOnly(s.d):
+		return []ui.Hint{hint("j/k", "move"), hint("enter", "shell"), hint("t", "test"), hint("d", "detail")}
 	case len(s.fleet.Servers) == 0:
 		return []ui.Hint{hint("a", "add server")}
 	default:
@@ -471,11 +559,15 @@ func (s *servers) Commands() []ui.Command {
 	act := func(a serversAction) func() tea.Cmd {
 		return func() tea.Cmd { return emit(serversActionMsg{action: a}) }
 	}
+	test := ui.Command{Title: "Test connection", Hint: "t", Run: act(serversTest)}
+	if isReadOnly(s.d) {
+		return []ui.Command{test}
+	}
 	return []ui.Command{
 		{Title: "Add server", Hint: "a", Run: act(serversAdd)},
 		{Title: "Edit selected server", Hint: "e", Run: act(serversEdit)},
 		{Title: "Delete selected server", Hint: "x", Run: act(serversDelete)},
-		{Title: "Test connection", Hint: "t", Run: act(serversTest)},
+		test,
 	}
 }
 
@@ -523,6 +615,10 @@ func (s *servers) table(w, h int, focused bool) string {
 	iw, ih := widgets.PanelInner(w, h)
 	cols := fitColumns(s.columns(), iw)
 	columns, cells := tableData(cols, rows)
+	empty := "No servers yet — press a to add one"
+	if isReadOnly(s.d) {
+		empty = "No servers"
+	}
 	return widgets.Panel(t, widgets.PanelOpts{
 		Width:   w,
 		Height:  h,
@@ -532,7 +628,7 @@ func (s *servers) table(w, h int, focused bool) string {
 		Body: widgets.Table(t, widgets.TableOpts{
 			Width: iw, Height: ih, Columns: columns, Rows: cells,
 			Selected: rowIndex(rows, s.selected),
-			Empty:    "No servers yet — press a to add one",
+			Empty:    empty,
 		}),
 	})
 }
@@ -587,7 +683,7 @@ func (s *servers) access(w, h int) string {
 		keyLine = fg(t.P.Accent2, widgets.FitLine(key, iw))
 	}
 	intro := paint(t.P.Muted, wrapWords("vigil reads metrics over SSH, no agent needed. Add the manager public key to ~/.ssh/authorized_keys of each target user:", iw))
-	outro := paint(t.P.Faint, wrapWords("A per-server SSH key path overrides the manager key. The full key is shown in the Settings tab.", iw))
+	outro := paint(t.P.Faint, wrapWords("A per-server SSH key (a file name in <data>/keys) overrides the manager key. The full key is shown in the Settings tab.", iw))
 	lines := append(append(intro, keyLine, ""), outro...)
 	if ih < len(lines) {
 		short := paint(t.P.Muted, wrapWords("Add the manager key to ~/.ssh/authorized_keys of each target user:", iw))

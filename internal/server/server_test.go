@@ -411,6 +411,27 @@ func TestPublicMode(t *testing.T) {
 	waitFor(t, "dashboard output", func() bool { return stdout.Len() > 0 })
 }
 
+// namedSession is an ssh.Session that only knows its user.
+type namedSession struct {
+	ssh.Session
+	user string
+}
+
+func (s namedSession) User() string { return s.user }
+
+func TestUIDepsReadOnlyWhenPublic(t *testing.T) {
+	for _, public := range []bool{false, true} {
+		s := &server{cfg: Config{Public: public}, deps: Deps{MaxServers: 50}}
+		d := s.uiDeps(namedSession{user: "guest"}, "xterm", newSession(80, 24, io.Discard))
+		if d.ReadOnly != public {
+			t.Errorf("public=%v: ReadOnly = %v", public, d.ReadOnly)
+		}
+		if d.MaxServers != 50 {
+			t.Errorf("public=%v: MaxServers = %d, want 50", public, d.MaxServers)
+		}
+	}
+}
+
 func testHostKeyPEM(t *testing.T) []byte {
 	t.Helper()
 	_, priv, err := ed25519.GenerateKey(rand.Reader)

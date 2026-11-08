@@ -42,6 +42,14 @@ type Deps struct {
 	Listen string
 	// Term is the client TERM value.
 	Term string
+	// ReadOnly hides and refuses every mutation of shared state (adding,
+	// editing and deleting servers, editing and saving settings). It is
+	// set for public demo sessions, whose anonymous viewers share one
+	// store.
+	ReadOnly bool
+	// MaxServers caps the inventory: adding a server is refused once this
+	// many exist. 0 means no limit.
+	MaxServers int
 }
 
 // TabID identifies a top-level tab.

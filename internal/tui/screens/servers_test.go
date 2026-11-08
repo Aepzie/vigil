@@ -3,6 +3,7 @@ package screens
 import (
 	"errors"
 	"slices"
+	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -141,16 +142,99 @@ func TestServersSaveErrorShownInForm(t *testing.T) {
 	s := newTestServers(t)
 	send(s, "a")
 	s.form.busy = true
-	s.Update(serverSavedMsg{err: errors.New("host: invalid address")})
+	s.Update(serverSavedMsg{err: errors.New("host: invalid address"), seq: s.form.seq})
 	if s.form == nil || s.form.busy {
 		t.Fatal("form must stay open and become editable again")
 	}
 	if s.form.fields[fieldHost].err == "" || s.form.focus != fieldHost {
 		t.Fatalf("store error not attached to host field: %+v", s.form.fields[fieldHost])
 	}
-	s.Update(serverSavedMsg{err: errors.New("disk full")})
+	s.Update(serverSavedMsg{err: errors.New("disk full"), seq: s.form.seq})
 	if s.form.err != "disk full" {
 		t.Fatalf("general error %q", s.form.err)
+	}
+}
+
+func TestServersKeyField(t *testing.T) {
+	s := newTestServers(t)
+	send(s, "a")
+	key := s.form.fields[fieldKey]
+	if key.label != "SSH key" {
+		t.Fatalf("label %q", key.label)
+	}
+	if want := "manager key (or file name in <data>/keys)"; key.input.placeholder != want {
+		t.Fatalf("placeholder %q, want %q", key.input.placeholder, want)
+	}
+	if !strings.Contains(key.help, "<data>/keys") {
+		t.Fatalf("help %q does not mention <data>/keys", key.help)
+	}
+	send(s, "up")
+	send(s, "up")
+	typeText(s, "deploy_ed25519")
+	if got := s.form.Value(fieldKey); got != "deploy_ed25519" {
+		t.Fatalf("key field value %q", got)
+	}
+	checkSize(t, s.View(100, 30), 100, 30)
+}
+
+// fillServerForm types a valid server into the open add form.
+func fillServerForm(s *servers, name string) {
+	typeText(s, name)
+	send(s, "tab")
+	typeText(s, "10.0.0.9")
+	send(s, "tab")
+	send(s, "tab")
+	typeText(s, "ops")
+}
+
+func TestServersStaleSaveResultIgnored(t *testing.T) {
+	s := newTestServers(t)
+	send(s, "a")
+	fillServerForm(s, "web-02")
+	_, firstSave := send(s, "ctrl+s")
+	if firstSave == nil || !s.form.busy {
+		t.Fatal("ctrl+s did not start saving")
+	}
+	send(s, "esc")
+	if s.form != nil {
+		t.Fatal("esc did not close the busy form")
+	}
+
+	send(s, "e")
+	second := s.form
+	if second == nil {
+		t.Fatal("e did not open the edit form")
+	}
+	firstResult, ok := find[serverSavedMsg](collect(firstSave))
+	if !ok {
+		t.Fatal("no save result")
+	}
+	failed := firstResult
+	failed.err = errors.New("host: invalid address")
+	_, cmd := s.Update(failed)
+	if s.form != second || second.err != "" || second.fields[fieldHost].err != "" {
+		t.Fatal("stale error landed on the new form")
+	}
+	if toast, ok := find[ui.ToastMsg](collect(cmd)); !ok || toast.Text != "Save failed: host: invalid address" {
+		t.Fatalf("stale error not toasted: %#v", collect(cmd))
+	}
+
+	if firstResult.err != nil {
+		t.Fatalf("first save failed: %v", firstResult.err)
+	}
+	_, cmd = s.Update(firstResult)
+	if s.form != second {
+		t.Fatal("stale success closed the new form")
+	}
+	out := collect(cmd)
+	if toast, ok := find[ui.ToastMsg](out); !ok || toast.Text != "Added web-02" {
+		t.Fatalf("stale success not toasted: %#v", out)
+	}
+	if _, ok := find[ui.RefreshMsg](out); !ok {
+		t.Fatalf("stale success did not refresh: %#v", out)
+	}
+	if s.selected != "s2" {
+		t.Fatalf("selection moved under the open form to %q", s.selected)
 	}
 }
 
@@ -220,7 +304,7 @@ func TestServersEnterOpensShell(t *testing.T) {
 }
 
 func TestServersNoStore(t *testing.T) {
-	cmd := saveServerCmd(&ui.Deps{}, store.Server{Name: "a"}, false)
+	cmd := saveServerCmd(&ui.Deps{}, store.Server{Name: "a"}, false, 0)
 	msg, ok := cmd().(serverSavedMsg)
 	if !ok || !errors.Is(msg.err, errNoStore) {
 		t.Fatalf("got %#v", msg)
@@ -250,5 +334,87 @@ func TestSplitTags(t *testing.T) {
 		if got := splitTags(tt.in); !slices.Equal(got, tt.want) {
 			t.Errorf("splitTags(%q) = %q, want %q", tt.in, got, tt.want)
 		}
+	}
+}
+
+func expectToast(t *testing.T, cmd tea.Cmd, text string) {
+	t.Helper()
+	toast, ok := find[ui.ToastMsg](collect(cmd))
+	if !ok || toast.Text != text {
+		t.Fatalf("want toast %q, got %#v", text, collect(cmd))
+	}
+}
+
+func TestServersReadOnly(t *testing.T) {
+	d := testDeps(t)
+	d.ReadOnly = true
+	s := newServers(d)
+	s.Update(ui.FleetMsg{Fleet: fakeFleet()})
+
+	for _, key := range []string{"a", "e", "x", "delete"} {
+		_, cmd := send(s, key)
+		if s.Capturing() {
+			t.Fatalf("%s opened a dialog in a read-only session", key)
+		}
+		expectToast(t, cmd, readOnlyNotice)
+	}
+	for _, a := range []serversAction{serversAdd, serversEdit, serversDelete} {
+		_, cmd := s.Update(serversActionMsg{action: a})
+		if s.Capturing() {
+			t.Fatalf("palette action %d opened a dialog", a)
+		}
+		expectToast(t, cmd, readOnlyNotice)
+	}
+	for _, h := range s.Hints() {
+		if h.Key == "a" || h.Key == "e" || h.Key == "x" {
+			t.Fatalf("mutation hint %+v shown", h)
+		}
+	}
+	if cmds := s.Commands(); len(cmds) != 1 || cmds[0].Title != "Test connection" {
+		t.Fatalf("read-only commands: %+v", cmds)
+	}
+	if _, cmd := send(s, "t"); cmd == nil {
+		t.Fatal("test connection must stay available")
+	}
+
+	srv := store.Server{Name: "web-09", Host: "10.0.0.9", Port: 22, User: "ops"}
+	if msg := saveServerCmd(d, srv, false, 0)().(serverSavedMsg); !errors.Is(msg.err, errReadOnly) {
+		t.Fatalf("save in read-only session: %v", msg.err)
+	}
+	if msg := deleteServerCmd(d, "s1", "web-01")().(serverDeletedMsg); !errors.Is(msg.err, errReadOnly) {
+		t.Fatalf("delete in read-only session: %v", msg.err)
+	}
+	if n := len(d.Store.Servers()); n != 0 {
+		t.Fatalf("read-only session changed the store: %d servers", n)
+	}
+}
+
+func TestServersMaxServers(t *testing.T) {
+	d := testDeps(t)
+	d.MaxServers = len(fakeFleet().Servers)
+	s := newServers(d)
+	s.Update(ui.FleetMsg{Fleet: fakeFleet()})
+	_, cmd := send(s, "a")
+	if s.form != nil {
+		t.Fatal("add form opened at the server limit")
+	}
+	expectToast(t, cmd, "server limit reached (4)")
+	if send(s, "e"); s.form == nil {
+		t.Fatal("editing must stay possible at the limit")
+	}
+
+	d.MaxServers = 1
+	first := store.Server{Name: "web-09", Host: "10.0.0.9", Port: 22, User: "ops"}
+	saved := saveServerCmd(d, first, false, 0)().(serverSavedMsg)
+	if saved.err != nil {
+		t.Fatalf("first add: %v", saved.err)
+	}
+	second := store.Server{Name: "web-10", Host: "10.0.0.10", Port: 22, User: "ops"}
+	if msg := saveServerCmd(d, second, false, 0)().(serverSavedMsg); msg.err == nil {
+		t.Fatal("add beyond the limit succeeded")
+	}
+	saved.srv.User = "root"
+	if msg := saveServerCmd(d, saved.srv, true, 0)().(serverSavedMsg); msg.err != nil {
+		t.Fatalf("update at the limit: %v", msg.err)
 	}
 }

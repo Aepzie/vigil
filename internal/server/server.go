@@ -82,6 +82,7 @@ type Config struct {
 	// Public lets anyone log in without credentials. It exists for
 	// `vigil demo --serve --public` and is refused unless Deps.Dialer is
 	// nil, so no remote shell can be reached through a public server.
+	// Public sessions are read-only (ui.Deps.ReadOnly).
 	Public bool
 }
 
@@ -99,6 +100,9 @@ type Deps struct {
 	Source collector.Source
 	// PollNow, when non-nil, replaces Hub.PollNow.
 	PollNow func(id string)
+	// MaxServers caps how many servers sessions can add (demo mode); 0
+	// means no limit.
+	MaxServers int
 }
 
 // NewLogger returns the default server logger writing to stderr.
@@ -149,7 +153,15 @@ func Serve(ctx context.Context, ln net.Listener, cfg Config, d Deps) error {
 		return fmt.Errorf("data dir: %w", err)
 	}
 
-	s := &server{ctx: ctx, cfg: cfg, deps: d, log: cfg.Logger, failures: newFailureLimiter(failureLimit, failureWindow)}
+	s := &server{
+		ctx:           ctx,
+		cfg:           cfg,
+		deps:          d,
+		log:           cfg.Logger,
+		failures:      newFailureLimiter(failureLimit, failureWindow),
+		preAuth:       newConnLimiter(maxPreAuthPerClient, maxPreAuthTotal),
+		passwordSlots: make(chan struct{}, maxPasswordChecks),
+	}
 	srv, err := s.build()
 	if err != nil {
 		return err
@@ -214,7 +226,11 @@ type server struct {
 	deps     Deps
 	log      *log.Logger
 	failures *failureLimiter
-	sessions sessionTracker
+	// preAuth counts connections that have not authenticated yet.
+	preAuth *connLimiter
+	// passwordSlots is a semaphore bounding concurrent password checks.
+	passwordSlots chan struct{}
+	sessions      sessionTracker
 }
 
 func (s *server) build() (*ssh.Server, error) {
@@ -229,6 +245,7 @@ func (s *server) build() (*ssh.Server, error) {
 		}
 	}
 	srv, err := wish.NewServer(append(authOpts,
+		s.limitPreAuth(),
 		wish.WithHostKeyPath(filepath.Join(s.cfg.DataDir, HostKeyFile)),
 		wish.WithIdleTimeout(s.cfg.IdleTimeout),
 		wish.WithMaxTimeout(s.cfg.MaxTimeout),
@@ -249,18 +266,77 @@ func (s *server) build() (*ssh.Server, error) {
 	return srv, nil
 }
 
+// limitPreAuth installs the pre-authentication connection limits: a
+// connection holds a slot of s.preAuth from accept until it authenticates
+// or closes, and is closed right away when no slot is free.
+func (s *server) limitPreAuth() ssh.Option {
+	return func(srv *ssh.Server) error {
+		srv.ConnCallback = s.admitConn
+		srv.ServerConfigCallback = s.serverConfig
+		return nil
+	}
+}
+
+// preAuthReleaseKey is the ssh.Context key of the function that frees a
+// connection's pre-authentication slot.
+type preAuthReleaseKey struct{}
+
+// admitConn is the ConnCallback: it reserves a pre-authentication slot
+// for the client and frees it when the connection closes. Returning nil
+// makes the ssh server close the connection.
+func (s *server) admitConn(ctx ssh.Context, conn net.Conn) net.Conn {
+	release, ok := s.preAuth.acquire(clientKey(conn.RemoteAddr()))
+	if !ok {
+		s.log.Warn("connection refused: too many unauthenticated connections", "remote-addr", remoteIP(conn.RemoteAddr()))
+		return nil
+	}
+	ctx.SetValue(preAuthReleaseKey{}, release)
+	return &releasingConn{Conn: conn, release: release}
+}
+
+// serverConfig frees the pre-authentication slot of a connection as soon
+// as it authenticated successfully.
+func (s *server) serverConfig(ctx ssh.Context) *gossh.ServerConfig {
+	return &gossh.ServerConfig{
+		AuthLogCallback: func(_ gossh.ConnMetadata, _ string, err error) {
+			if err != nil {
+				return
+			}
+			if release, ok := ctx.Value(preAuthReleaseKey{}).(func()); ok {
+				release()
+			}
+		},
+	}
+}
+
 func (s *server) checkPassword(ctx ssh.Context, password string) bool {
-	ip := remoteIP(ctx.RemoteAddr())
-	if s.failures.blocked(ip) {
-		s.log.Warn("password attempt rejected: too many failures", "user", ctx.User(), "remote-addr", ip)
+	return s.passwordLogin(ctx, ctx.User(), ctx.RemoteAddr(), password)
+}
+
+// passwordLogin checks a password attempt of user from addr, applying the
+// failure limits, the bound on concurrent checks and the failure penalty.
+func (s *server) passwordLogin(ctx context.Context, user string, addr net.Addr, password string) bool {
+	ip := remoteIP(addr)
+	key := clientKey(addr)
+	if err := s.failures.blocked(key); err != nil {
+		s.log.Warn("password attempt rejected: "+err.Error(), "user", user, "remote-addr", ip)
 		penalize(ctx)
 		return false
 	}
-	if s.deps.Auth.CheckPassword(ctx.User(), password) {
+	select {
+	case s.passwordSlots <- struct{}{}:
+	default:
+		s.log.Warn("password attempt rejected: too many concurrent checks", "user", user, "remote-addr", ip)
+		penalize(ctx)
+		return false
+	}
+	ok := s.deps.Auth.CheckPassword(user, password)
+	<-s.passwordSlots
+	if ok {
 		return true
 	}
-	s.failures.fail(ip)
-	s.log.Warn("password authentication failed", "user", ctx.User(), "remote-addr", ip)
+	s.failures.fail(key)
+	s.log.Warn("password authentication failed", "user", user, "remote-addr", ip)
 	penalize(ctx)
 	return false
 }
@@ -363,6 +439,9 @@ func (s *server) uiDeps(sess ssh.Session, term string, st *session) *ui.Deps {
 		DataDir:   s.cfg.DataDir,
 		Listen:    s.cfg.Addr,
 		Term:      sanitize.Line(term),
+		// Anonymous viewers of a public server share one store.
+		ReadOnly:   s.cfg.Public,
+		MaxServers: s.deps.MaxServers,
 	}
 	if d.Source == nil {
 		d.Source = s.deps.Hub
