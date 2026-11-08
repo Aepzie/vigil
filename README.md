@@ -55,6 +55,24 @@ Layouts adapt from 80×24 up to very large terminals, see
 
 ### Install
 
+Prebuilt binaries for Linux (amd64, arm64, armv7) and Windows (amd64,
+arm64) are attached to every
+[release](https://github.com/Aepzie/vigil/releases), together with a
+source archive and a SHA-256 checksum file. On Linux:
+
+```bash
+VERSION=0.1.0
+curl -LO https://github.com/Aepzie/vigil/releases/download/v${VERSION}/vigil_${VERSION}_linux_amd64.tar.gz
+curl -LO https://github.com/Aepzie/vigil/releases/download/v${VERSION}/vigil_${VERSION}_checksums.txt
+sha256sum --ignore-missing -c vigil_${VERSION}_checksums.txt
+tar -xzf vigil_${VERSION}_linux_amd64.tar.gz vigil
+sudo install -m 0755 vigil /usr/local/bin/vigil
+```
+
+On Windows, download `vigil_<version>_windows_amd64.zip`, compare
+`Get-FileHash <file> -Algorithm SHA256` with the checksum file and unpack
+`vigil.exe`.
+
 With Go 1.26 or newer:
 
 ```bash

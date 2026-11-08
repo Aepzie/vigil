@@ -37,6 +37,19 @@ into `main` for a release.
 Keep branches focused; several small pull requests are easier to review
 than one large one.
 
+## Releases
+
+Releases are cut from `main` by pushing a `vX.Y.Z` tag. The
+[release workflow](.github/workflows/release.yml) runs the tests and
+[GoReleaser](https://goreleaser.com), which attaches Linux and Windows
+archives, a source archive and a SHA-256 checksum file to the GitHub
+release. Check the configuration locally with:
+
+```bash
+goreleaser check
+goreleaser release --snapshot --clean
+```
+
 ## Commits
 
 Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/):
