@@ -200,6 +200,79 @@ func TestParseSampleFixture(t *testing.T) {
 	}
 }
 
+// fakeDF emulates df variants as sh functions, which take precedence
+// over commands in PATH. Every df and timeout call is logged to fd 3.
+const fakeDF = `exec 3>&2
+dfT() { printf 'Filesystem Type 1024-blocks Used Available Capacity Mounted on\n/dev/sda1 ext4 100 60 40 60%% /\n'; }
+dfP() { printf 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/root 100 30 70 30%% /\n'; }
+df() {
+	echo "df $*" >&3
+	case "$MODE:$1" in
+	gnu:*) dfT ;;
+	busybox:-kPTl) echo 'df: invalid option -- l' >&2; return 1 ;;
+	busybox:-kPT) dfT ;;
+	oldbusybox:-kP) dfP ;;
+	oldbusybox:*) echo usage >&2; return 1 ;;
+	partial:*) dfT; return 1 ;;
+	hung:*) return 137 ;;
+	esac
+}
+timeout() {
+	echo "timeout $*" >&3
+	case "$TIMEOUT:$3" in
+	none:*) return 127 ;;
+	old:-t) shift 4 ;;
+	old:*) return 127 ;;
+	*) shift 3 ;;
+	esac
+	"$@"
+}
+`
+
+func TestDFScriptVariants(t *testing.T) {
+	sh, err := exec.LookPath("sh")
+	if err != nil {
+		t.Skip("no sh in PATH")
+	}
+	tests := []struct {
+		mode, timeout string
+		calls         []string
+		mount         string
+	}{
+		{"gnu", "gnu", []string{"timeout -s KILL 3 true", "timeout -s KILL 3 df -kPTl", "df -kPTl"}, "/dev/sda1"},
+		{"busybox", "gnu", []string{"timeout -s KILL 3 true", "timeout -s KILL 3 df -kPTl", "df -kPTl", "timeout -s KILL 3 df -kPT", "df -kPT"}, "/dev/sda1"},
+		{"oldbusybox", "old", []string{
+			"timeout -s KILL 3 true", "timeout -s KILL -t 3 true",
+			"timeout -s KILL -t 3 df -kPTl", "df -kPTl", "timeout -s KILL -t 3 df -kPT", "df -kPT", "timeout -s KILL -t 3 df -kP", "df -kP",
+		}, "/dev/root"},
+		{"oldbusybox", "none", []string{"timeout -s KILL 3 true", "timeout -s KILL -t 3 true", "df -kPTl", "df -kPT", "df -kP"}, "/dev/root"},
+		{"partial", "gnu", []string{"timeout -s KILL 3 true", "timeout -s KILL 3 df -kPTl", "df -kPTl"}, "/dev/sda1"},
+		{"hung", "gnu", []string{"timeout -s KILL 3 true", "timeout -s KILL 3 df -kPTl", "df -kPTl"}, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.mode+"/"+tt.timeout, func(t *testing.T) {
+			cmd := exec.CommandContext(t.Context(), sh, "-c", fakeDF+dfScript)
+			cmd.Env = append(os.Environ(), "MODE="+tt.mode, "TIMEOUT="+tt.timeout)
+			var stdout, log bytes.Buffer
+			cmd.Stdout, cmd.Stderr = &stdout, &log
+			if err := cmd.Run(); err != nil {
+				t.Fatalf("run: %v\n%s", err, log.String())
+			}
+			calls := strings.Split(strings.TrimSpace(log.String()), "\n")
+			if strings.Join(calls, "|") != strings.Join(tt.calls, "|") {
+				t.Errorf("calls = %q, want %q", calls, tt.calls)
+			}
+			disks := parseDF(stdout.String())
+			switch {
+			case tt.mount == "" && len(disks) != 0:
+				t.Errorf("disks = %+v, want none", disks)
+			case tt.mount != "" && (len(disks) != 1 || disks[0].Device != tt.mount):
+				t.Errorf("disks = %+v, want only %s", disks, tt.mount)
+			}
+		})
+	}
+}
+
 // TestScriptRunsWithLocalShell checks the script with a real POSIX sh:
 // on Linux it runs against the local /proc and must parse; elsewhere it
 // is only syntax-checked when sh is available.

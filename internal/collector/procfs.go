@@ -235,8 +235,7 @@ var pseudoDevices = map[string]bool{
 // collapsed to the shortest mount point. Total is Used+Available, so
 // UsedPct matches df's Capacity column (reserved blocks are not usable).
 // Mount points may contain spaces. Each header line re-detects the
-// format, because the script falls back to `df -kP` when `df -kPT` exits
-// non-zero after printing partial output.
+// format, so concatenated outputs of different df variants also parse.
 func parseDF(text string) []metrics.Disk {
 	hasType, seenHeader := false, false
 	best := make(map[string]metrics.Disk)

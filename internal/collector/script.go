@@ -61,8 +61,29 @@ func procsCommand(root string) string {
 	return "ls -ln " + root + " 2>/dev/null | awk -v R=" + root + " '" + procsAWK + "'"
 }
 
-// scriptBody is the POSIX sh poll script. df runs under timeout(1) when
-// available because a stale network mount can hang it indefinitely.
+// dfScript prints the filesystem table, at most one df run's worth.
+//
+// df -l reports local filesystems only, so a hung network mount (NFS,
+// CIFS, sshfs) can neither stall the poll nor, because GNU df prints its
+// table only at the end, wipe out the local disks; network shares are
+// best monitored on their server. df still runs under timeout(1) when
+// available, with SIGKILL since a process blocked on a hard mount
+// ignores SIGTERM; busybox before 1.30 spells the duration "-t 3".
+//
+// busybox df has no -l and may lack -T. An unknown option makes df exit
+// 1 without output, and only then is the next variant tried: a timeout
+// (status 124 or 137) or a partial failure with output is final, so a
+// poll never waits for more than one df.
+const dfScript = `T=
+if timeout -s KILL 3 true >/dev/null 2>&1; then T='timeout -s KILL 3'
+elif timeout -s KILL -t 3 true >/dev/null 2>&1; then T='timeout -s KILL -t 3'; fi
+D() { $T df "$@" 2>/dev/null; }
+o=$(D -kPTl); r=$?
+if [ $r -eq 1 ] && [ -z "$o" ]; then o=$(D -kPT); r=$?; fi
+if [ $r -eq 1 ] && [ -z "$o" ]; then o=$(D -kP); fi
+printf '%s\n' "$o"`
+
+// scriptBody is the POSIX sh poll script.
 var scriptBody = `s() { printf '\n` + markerPrefix + `%s:%s\n' "$N" "$1"; }
 s ` + secStat + `; cat /proc/stat 2>/dev/null
 s ` + secMeminfo + `; cat /proc/meminfo 2>/dev/null
@@ -70,8 +91,7 @@ s ` + secLoadavg + `; cat /proc/loadavg 2>/dev/null
 s ` + secUptime + `; cat /proc/uptime 2>/dev/null
 s ` + secNetDev + `; cat /proc/net/dev 2>/dev/null
 s ` + secDF + `
-if command -v timeout >/dev/null 2>&1; then T='timeout 3'; else T=''; fi
-$T df -kPT 2>/dev/null || $T df -kP 2>/dev/null
+` + dfScript + `
 s ` + secUname + `; uname -sr 2>/dev/null
 s ` + secOS + `; cat /etc/os-release 2>/dev/null || cat /usr/lib/os-release 2>/dev/null
 s ` + secHostname + `; hostname 2>/dev/null || cat /proc/sys/kernel/hostname 2>/dev/null
