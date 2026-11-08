@@ -138,11 +138,20 @@ func TestShellDialFailure(t *testing.T) {
 	d, _ := newTestDialer(t)
 	stranger := sshtest.NewSigner(t)
 	srv := sshtest.Start(t, sshtest.Options{AuthorizedKeys: []ssh.PublicKey{stranger.PublicKey()}})
+	shellErrorPause = 0
+	t.Cleanup(func() { shellErrorPause = 2500 * time.Millisecond })
 	sh := d.NewShell(serverFor(srv), "", 80, 24)
 	sh.SetStdin(strings.NewReader(""))
+	var out strings.Builder
+	sh.SetStdout(&out)
 	err := sh.Run()
 	if !errors.Is(err, ErrAuthFailed) {
 		t.Fatalf("Run = %v, want ErrAuthFailed", err)
+	}
+	for _, want := range []string{"connecting to ", "could not connect to ", "auth failed"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("shell output %q lacks %q", out.String(), want)
+		}
 	}
 }
 

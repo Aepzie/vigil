@@ -10,6 +10,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/Aepzie/vigil/internal/compat"
+	"github.com/Aepzie/vigil/internal/metrics"
 	"github.com/Aepzie/vigil/internal/sanitize"
 	"github.com/Aepzie/vigil/internal/store"
 	"github.com/Aepzie/vigil/internal/theme"
@@ -386,6 +387,13 @@ func (m Model) openShell(id string) (Model, tea.Cmd) {
 	}
 	if m.deps.Shell == nil {
 		return m.toast(theme.ToneWarn, "shell not available in this mode")
+	}
+	if snap, ok := m.fleet.Snaps[id]; ok && snap.State == metrics.StateOffline {
+		reason := sanitize.Line(snap.Err)
+		if reason == "" {
+			reason = "unreachable"
+		}
+		return m.toast(theme.ToneWarn, srv.Name+" is offline ("+reason+") · check host/port with e in Servers")
 	}
 	exec := m.deps.Shell(srv)
 	if exec == nil {
