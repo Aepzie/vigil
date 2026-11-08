@@ -44,6 +44,12 @@ ssh admin@manager -p 2222
 | ![Detail tab with CPU, memory and network charts](docs/screenshots/detail-150x44.svg) | ![Alerts tab with active and resolved alerts](docs/screenshots/alerts-150x44.svg) |
 | **Servers** | **Settings** |
 | ![Servers tab with the inventory table](docs/screenshots/servers-150x44.svg) | ![Settings tab with thresholds and the manager key](docs/screenshots/settings-150x44.svg) |
+| **Detail at 80×24** | **Compatibility mode (ascii)** |
+| ![Detail tab in an 80x24 terminal](docs/screenshots/detail-80x24.svg) | ![Overview rendered with ASCII-only glyphs](docs/screenshots/overview-150x44-ascii.svg) |
+
+Layouts adapt from 80×24 up to very large terminals, see
+[overview at 220×60](docs/screenshots/overview-220x60.svg) and
+[detail at 220×60](docs/screenshots/detail-220x60.svg).
 
 ## Quick start
 
