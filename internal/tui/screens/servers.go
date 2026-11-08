@@ -298,7 +298,9 @@ func newServerForm(title string, srv store.Server, canInstall bool) *serverForm 
 		in.SetValue(value)
 		return formField{label: label, help: help, input: in}
 	}
-	port := ""
+	// The port is always a real value, never a placeholder: a faint "22"
+	// placeholder reads like a value and typing over it saved "2".
+	port := strconv.Itoa(defaultSSHPort)
 	if srv.Port != 0 {
 		port = strconv.Itoa(srv.Port)
 	}
@@ -309,7 +311,7 @@ func newServerForm(title string, srv store.Server, canInstall bool) *serverForm 
 			fields: []formField{
 				fieldName:     field("Name", "e.g. web-01", "a short unique label", srv.Name),
 				fieldHost:     field("Host/IP", "e.g. 10.0.0.12 or web.example.com", "hostname, IPv4 or IPv6 address", srv.Host),
-				fieldPort:     field("Port", "22", "SSH port, default 22", port),
+				fieldPort:     field("Port", "1-65535", "SSH port, default 22", port),
 				fieldUser:     field("User", "e.g. ubuntu", "remote login user", srv.User),
 				fieldPassword: {label: "Password", help: passwordHelp, input: newMaskedInput("optional"), hidden: !canInstall},
 				fieldKey:      field("SSH key", "manager key (or file name in <data>/keys)", "optional private key file name in <data>/keys", srv.KeyPath),
