@@ -2,12 +2,14 @@ package screens
 
 import (
 	"cmp"
+	"math"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/CraguS/vigil/internal/format"
 	"github.com/CraguS/vigil/internal/metrics"
@@ -18,16 +20,32 @@ import (
 
 // Detail layout constants.
 const (
-	detailChartMinW  = 44
-	detailKPIMinW    = 30
-	detailKPIMaxW    = 44
-	detailVitalsMinH = 7
-	detailVitalsMaxH = 16
-	detailMinBand2H  = 6
-	detailCoresMinH  = 12
-	detailSideMinW   = 76
-	detailChartMinH  = 8
-	detailChartMaxH  = 12
+	detailKPIMinW  = 30
+	detailKPIMaxW  = 44
+	detailSideMinW = 76
+
+	// detailChartMinW × detailChartMinH is the smallest chart panel: a
+	// plot of four rows plus the time axis.
+	detailChartMinW = 30
+	detailChartMinH = 7
+	// detailChartAspect is the preferred width/height of a chart panel in
+	// cells when choosing how to arrange the charts.
+	detailChartAspect = 6.0
+
+	// detailResourceMaxPct caps the share of the body the cores, disks
+	// and processes panels may take from the charts.
+	detailResourceMaxPct = 45
+	detailMinPanelH      = 3
+	detailProcMinH       = 5
+	detailDiskMaxRows    = 8
+	detailProcMaxRows    = 12
+	detailCoreMaxRows    = 16
+
+	// detailFullHeaderMinH is the content height from which the header
+	// is a bordered panel; below it a compact two-line header is used,
+	// and below detailTwoLineHeaderMinH a single line.
+	detailFullHeaderMinH    = 24
+	detailTwoLineHeaderMinH = 12
 )
 
 // detailAction is a palette-triggered action of the Detail screen.
@@ -38,10 +56,16 @@ const (
 	detailNext
 	detailShell
 	detailPoll
+	detailSetWindow
+	detailNextChart
 )
 
-// detailActionMsg carries a palette command back into Update.
-type detailActionMsg struct{ action detailAction }
+// detailActionMsg carries a palette command back into Update. window
+// indexes historyWindows for detailSetWindow.
+type detailActionMsg struct {
+	action detailAction
+	window int
+}
 
 // detail shows one server in depth.
 type detail struct {
@@ -52,10 +76,22 @@ type detail struct {
 	// lastGood keeps the most recent online snapshot per server so an
 	// offline server can still show its last known values (dimmed).
 	lastGood map[string]metrics.Snapshot
+	// window indexes historyWindows: the time span of the charts.
+	window int
+	// focus indexes chartKinds: the chart shown when there is only room
+	// for one.
+	focus int
+	// cycling is true when the last View had room for a single chart, so
+	// the "c" hint is worth showing.
+	cycling bool
 }
 
 func newDetail(d *ui.Deps) *detail {
-	return &detail{d: d, t: themeOf(d), fleet: initialFleet(d), lastGood: map[string]metrics.Snapshot{}}
+	return &detail{
+		d: d, t: themeOf(d), fleet: initialFleet(d),
+		lastGood: map[string]metrics.Snapshot{},
+		window:   defaultHistoryWindow,
+	}
 }
 
 func (s *detail) Tab() ui.TabID   { return ui.TabDetail }
@@ -102,7 +138,7 @@ func (s *detail) Update(msg tea.Msg) (ui.Screen, tea.Cmd) {
 	case ui.ShowDetailMsg:
 		s.selected = msg.ServerID
 	case detailActionMsg:
-		return s, s.apply(msg.action)
+		return s, s.apply(msg)
 	case tea.KeyPressMsg:
 		return s, s.key(msg)
 	}
@@ -126,8 +162,8 @@ func (s *detail) absorb(f ui.Fleet) {
 	}
 }
 
-func (s *detail) apply(a detailAction) tea.Cmd {
-	switch a {
+func (s *detail) apply(msg detailActionMsg) tea.Cmd {
+	switch msg.action {
 	case detailPrev:
 		s.step(-1)
 	case detailNext:
@@ -136,8 +172,18 @@ func (s *detail) apply(a detailAction) tea.Cmd {
 		return s.shellCmd()
 	case detailPoll:
 		return pollServer(s.d, s.fleet, s.selectedID())
+	case detailSetWindow:
+		if msg.window >= 0 && msg.window < len(historyWindows) {
+			s.window = msg.window
+		}
+	case detailNextChart:
+		s.nextChart()
 	}
 	return nil
+}
+
+func (s *detail) nextChart() {
+	s.focus = (s.focus + 1) % len(chartKinds)
 }
 
 func (s *detail) key(msg tea.KeyPressMsg) tea.Cmd {
@@ -150,6 +196,10 @@ func (s *detail) key(msg tea.KeyPressMsg) tea.Cmd {
 		return s.shellCmd()
 	case "r":
 		return pollServer(s.d, s.fleet, s.selectedID())
+	case "w":
+		s.window = nextWindow(s.window)
+	case "c":
+		s.nextChart()
 	}
 	return nil
 }
@@ -175,7 +225,11 @@ func (s *detail) Hints() []ui.Hint {
 	if len(s.fleet.Servers) == 0 {
 		return []ui.Hint{hint("2", "add server")}
 	}
-	return []ui.Hint{hint("[ ]", "prev/next"), hint("enter", "shell"), hint("r", "poll")}
+	hints := []ui.Hint{hint("[ ]", "prev/next")}
+	if s.cycling {
+		hints = append(hints, hint("c", "chart"))
+	}
+	return append(hints, hint("w", "window"), hint("enter", "shell"), hint("r", "poll"))
 }
 
 // Commands implements ui.Screen.
@@ -183,12 +237,23 @@ func (s *detail) Commands() []ui.Command {
 	act := func(a detailAction) func() tea.Cmd {
 		return func() tea.Cmd { return emit(detailActionMsg{action: a}) }
 	}
-	return []ui.Command{
+	cmds := []ui.Command{
 		{Title: "Previous server", Hint: "[", Run: act(detailPrev)},
 		{Title: "Next server", Hint: "]", Run: act(detailNext)},
 		{Title: "Open shell on this server", Hint: "enter", Run: act(detailShell)},
 		{Title: "Poll this server now", Hint: "r", Run: act(detailPoll)},
+		{Title: "Show next chart (compact layout)", Hint: "c", Run: act(detailNextChart)},
 	}
+	for i, d := range historyWindows {
+		cmds = append(cmds, ui.Command{
+			Title: "Chart window " + windowLabel(d),
+			Hint:  "w",
+			Run: func() tea.Cmd {
+				return emit(detailActionMsg{action: detailSetWindow, window: i})
+			},
+		})
+	}
+	return cmds
 }
 
 // view is everything needed to render one frame of the Detail screen.
@@ -233,11 +298,8 @@ func (s *detail) View(width, height int) string {
 		})
 	}
 	v := s.resolve(row)
-	headerH := 4
-	if height < 14 {
-		headerH = 3
-	}
-	headerH = min(headerH, height)
+	s.cycling = false
+	headerH := detailHeaderHeight(height)
 	blocks := []string{s.header(v, width, headerH)}
 	if rest := height - headerH; rest > 0 {
 		blocks = append(blocks, s.body(v, width, rest))
@@ -245,8 +307,57 @@ func (s *detail) View(width, height int) string {
 	return widgets.Fit(widgets.JoinV(blocks...), width, height)
 }
 
-// header renders name, status and the identity/health lines.
-func (s *detail) header(v detailView, w, h int) string {
+// detailHeaderHeight is the height of the header for a content area h
+// rows tall: a bordered panel with two lines when there is room, a
+// compact borderless header otherwise.
+func detailHeaderHeight(h int) int {
+	switch {
+	case h >= detailFullHeaderMinH:
+		return 4
+	case h >= detailTwoLineHeaderMinH:
+		return 2
+	default:
+		return min(h, 1)
+	}
+}
+
+// rankedField is one part of a header line. Fields with a higher rank are
+// less important and dropped first when the line is too narrow.
+type rankedField struct {
+	text string
+	rank int
+}
+
+// fitFields joins the non-empty fields with dots into a line of at most w
+// cells. While the line is too wide the least important field is
+// dropped; a single remaining field is truncated with "…".
+func fitFields(t *theme.Theme, w int, fields []rankedField) string {
+	kept := slices.DeleteFunc(slices.Clone(fields), func(f rankedField) bool { return f.text == "" })
+	join := func() string {
+		parts := make([]string, len(kept))
+		for i, f := range kept {
+			parts[i] = f.text
+		}
+		return joinDots(t, parts...)
+	}
+	for len(kept) > 1 && ansi.StringWidth(join()) > w {
+		worst := 0
+		for i, f := range kept {
+			if f.rank >= kept[worst].rank {
+				worst = i
+			}
+		}
+		kept = slices.Delete(kept, worst, worst+1)
+	}
+	line := join()
+	if ansi.StringWidth(line) > w {
+		return widgets.FitLine(line, w)
+	}
+	return line
+}
+
+// identityFields describes where the server is and what it runs.
+func (s *detail) identityFields(v detailView) []rankedField {
 	t := s.t
 	snap := v.snap
 	srv := v.row.Srv
@@ -254,23 +365,29 @@ func (s *detail) header(v detailView, w, h int) string {
 	if srv.Port != 0 && srv.Port != defaultSSHPort {
 		addr = hostPort(addr, srv.Port)
 	}
-	identity := joinDots(t,
-		fg(t.P.Text, clean(srv.User)+"@"+addr),
-		fg(t.P.Muted, clean(snap.Hostname)),
-		fg(t.P.Muted, clean(snap.OS)),
-		fg(t.P.Faint, clean(snap.Kernel)),
-		coresText(t, snap.CPUCount),
-	)
-	var health string
+	return []rankedField{
+		{fg(t.P.Text, clean(srv.User)+"@"+addr), 0},
+		{fg(t.P.Muted, clean(snap.Hostname)), 3},
+		{fg(t.P.Muted, clean(snap.OS)), 1},
+		{fg(t.P.Faint, clean(snap.Kernel)), 4},
+		{coresText(t, snap.CPUCount), 2},
+	}
+}
+
+// healthFields describes how the server is doing right now.
+func (s *detail) healthFields(v detailView) []rankedField {
+	t := s.t
+	snap := v.snap
 	switch {
 	case v.row.Online():
-		health = joinDots(t,
-			labelValue(t, "up", fg(t.P.Text, format.Duration(snap.Uptime))),
-			labelValue(t, "latency", fg(t.P.Text, format.Latency(snap.Latency))),
-			labelValue(t, "load", fg(t.P.Text, loadText(snap.Load.One)+" "+loadText(snap.Load.Five)+" "+loadText(snap.Load.Fifteen))),
-			fg(t.P.Accent2, glyphDown+" "+format.Bits(snap.Net.RxBps))+" "+fg(t.P.Accent, glyphUp+" "+format.Bits(snap.Net.TxBps)),
-			fg(t.P.Faint, "polled "+format.Ago(v.row.Snap.At, s.fleet.Now)),
-		)
+		load := loadText(snap.Load.One) + " " + loadText(snap.Load.Five) + " " + loadText(snap.Load.Fifteen)
+		return []rankedField{
+			{labelValue(t, "up", fg(t.P.Text, format.Duration(snap.Uptime))), 0},
+			{labelValue(t, "latency", fg(t.P.Text, format.Latency(snap.Latency))), 2},
+			{labelValue(t, "load", fg(t.P.Text, load)), 1},
+			{fg(t.P.Accent2, glyphDown+" "+format.Bits(snap.Net.RxBps)) + " " + fg(t.P.Accent, glyphUp+" "+format.Bits(snap.Net.TxBps)), 4},
+			{fg(t.P.Faint, "polled "+format.Ago(v.row.Snap.At, s.fleet.Now)), 3},
+		}
 	case v.row.Has && v.row.Snap.State == metrics.StateOffline:
 		reason := clean(v.row.Snap.Err)
 		if reason == "" {
@@ -280,20 +397,42 @@ func (s *detail) header(v detailView, w, h int) string {
 		if v.dim {
 			stale = fg(t.P.Faint, "showing last known values")
 		}
-		health = joinDots(t,
-			fg(t.P.Bad, bold(glyphCross+" "+reason)),
-			fg(t.P.Muted, "last seen "+format.Ago(v.row.Snap.LastSeen, s.fleet.Now)),
-			stale,
-		)
-	default:
-		health = fg(t.P.Muted, "waiting for the first poll…")
-	}
-	lines := []string{identity, health}
-	if h < 4 {
-		lines = []string{health}
-		if v.row.Online() {
-			lines = []string{joinDots(t, identity, health)}
+		return []rankedField{
+			{fg(t.P.Bad, bold(glyphCross+" "+reason)), 0},
+			{fg(t.P.Muted, "last seen "+format.Ago(v.row.Snap.LastSeen, s.fleet.Now)), 1},
+			{stale, 2},
 		}
+	default:
+		return []rankedField{{fg(t.P.Muted, "waiting for the first poll…"), 0}}
+	}
+}
+
+// compactHeader renders the name, status badge and identity on the first
+// line and the health on the second; with a single line the health
+// follows the badge.
+func (s *detail) compactHeader(v detailView, w, h int) string {
+	t := s.t
+	lead := " " + fg(t.P.Text, bold(v.row.Name())) + " " + widgets.Badge(t, v.row.Status.Label, v.row.Status.Tone) + " "
+	room := max(w-ansi.StringWidth(lead)-1, 0)
+	if h < 2 {
+		return widgets.FitLine(lead+fitFields(t, room, s.healthFields(v)), w)
+	}
+	first := widgets.FitLine(lead+fitFields(t, room, s.identityFields(v)), w)
+	second := widgets.FitLine(" "+fitFields(t, max(w-2, 0), s.healthFields(v)), w)
+	return widgets.Fit(first+"\n"+second, w, h)
+}
+
+// header renders name, status and the identity/health lines: a bordered
+// panel when h ≥ 4, otherwise one or two borderless lines.
+func (s *detail) header(v detailView, w, h int) string {
+	t := s.t
+	if h < 4 {
+		return s.compactHeader(v, w, h)
+	}
+	iw, _ := widgets.PanelInner(w, h)
+	lines := []string{
+		fitFields(t, iw, s.identityFields(v)),
+		fitFields(t, iw, s.healthFields(v)),
 	}
 	return widgets.Panel(t, widgets.PanelOpts{
 		Width:   w,
@@ -325,37 +464,219 @@ const (
 	chartNet
 )
 
-// body lays out the vitals band (KPIs and charts) and the resources band
-// (cores, disks, processes) for the area below the header.
+// chartKinds are the history charts in display and cycling order.
+var chartKinds = []chartKind{chartCPU, chartMem, chartNet}
+
+// chartCell is the size of one chart panel in a chart arrangement.
+type chartCell struct {
+	kind chartKind
+	w, h int
+}
+
+// detailPlan is the vertical budget of the Detail body.
+type detailPlan struct {
+	kpiW int
+	// chartRows is the chart arrangement (see chartGrid), or 0 for a
+	// single chart that the "c" key cycles.
+	chartRows int
+	chartH    int
+	res       resourcePlan
+}
+
+// resourcePlan sizes the content-driven panels below the charts. A
+// panel height of zero hides that panel.
+type resourcePlan struct {
+	height int
+	// side places cores above disks in a column leftW cells wide, beside
+	// the processes; otherwise disks and processes span the full width.
+	side                bool
+	leftW               int
+	cores, disks, procs int
+}
+
+// plan splits the body: content-driven panels (cores, disks, processes)
+// get the rows their content needs, within a budget that keeps every
+// chart at least detailChartMinH tall, and the charts get all remaining
+// rows. When not even the smallest multi-chart arrangement fits, one
+// chart is shown (cycled with "c") and only a disks summary is kept.
+func (s *detail) plan(v detailView, w, h int) detailPlan {
+	p := detailPlan{kpiW: clamp(s.kpiWidth(v), detailKPIMinW, detailKPIMaxW)}
+	if minBand := chartBandMin(w, p.kpiW); minBand > 0 && h >= minBand {
+		budget := min(h-minBand, h*detailResourceMaxPct/100)
+		p.res = s.planResources(v, w, budget, true)
+	} else {
+		p.res = s.planResources(v, w, h-detailChartMinH, false)
+	}
+	p.chartH = h - p.res.height
+	p.chartRows = pickChartRows(w, p.chartH, p.kpiW)
+	return p
+}
+
+// chartGrid arranges the three charts in rows chart rows filling w×h,
+// with the KPI panel (kpiW wide) left of the first row:
+//
+//	1: Now │ CPU │ Memory │ Network
+//	2: Now │ CPU  /  Memory │ Network
+//	3: Now │ CPU  /  Memory  /  Network
+//
+// ok is false when a chart would be smaller than detailChartMinW ×
+// detailChartMinH.
+func chartGrid(rows, w, h, kpiW int) (grid [][]chartCell, ok bool) {
+	minW, minH := detailChartMinW, detailChartMinH
+	cpuW := w - kpiW - 1
+	switch rows {
+	case 1:
+		if h < minH || cpuW < 3*minW+2 {
+			return nil, false
+		}
+		widths := widgets.SplitWidths(cpuW, 3, 1)
+		return [][]chartCell{{{chartCPU, widths[0], h}, {chartMem, widths[1], h}, {chartNet, widths[2], h}}}, true
+	case 2:
+		halves := widgets.SplitWidths(w, 2, 1)
+		if h < 2*minH || cpuW < minW || halves[1] < minW {
+			return nil, false
+		}
+		hs := widgets.SplitWidths(h, 2, 0)
+		return [][]chartCell{
+			{{chartCPU, cpuW, hs[0]}},
+			{{chartMem, halves[0], hs[1]}, {chartNet, halves[1], hs[1]}},
+		}, true
+	case 3:
+		if h < 3*minH || cpuW < minW {
+			return nil, false
+		}
+		hs := widgets.SplitWidths(h, 3, 0)
+		return [][]chartCell{{{chartCPU, cpuW, hs[0]}}, {{chartMem, w, hs[1]}}, {{chartNet, w, hs[2]}}}, true
+	}
+	return nil, false
+}
+
+// chartBandMin is the smallest chart band height that shows all three
+// charts at width w, or 0 when the width only allows a single chart.
+func chartBandMin(w, kpiW int) int {
+	for rows := 1; rows <= 3; rows++ {
+		if _, ok := chartGrid(rows, w, rows*detailChartMinH, kpiW); ok {
+			return rows * detailChartMinH
+		}
+	}
+	return 0
+}
+
+// pickChartRows chooses the chart arrangement for a w×h band whose
+// least well-proportioned chart is closest to detailChartAspect, so
+// charts are neither tall slivers nor flat strips. It returns 0 when no
+// arrangement fits.
+func pickChartRows(w, h, kpiW int) int {
+	best, bestScore := 0, math.Inf(1)
+	for rows := 1; rows <= 3; rows++ {
+		grid, ok := chartGrid(rows, w, h, kpiW)
+		if !ok {
+			continue
+		}
+		score := 0.0
+		for _, row := range grid {
+			for _, c := range row {
+				aspect := float64(c.w) / float64(c.h)
+				score = max(score, math.Abs(math.Log(aspect/detailChartAspect)))
+			}
+		}
+		if score < bestScore {
+			best, bestScore = rows, score
+		}
+	}
+	return best
+}
+
+// planResources sizes cores, disks and processes to their content within
+// budget rows. Disks come first, then processes, then cores. With full
+// false only the disks summary is planned.
+func (s *detail) planResources(v detailView, w, budget int, full bool) resourcePlan {
+	if budget < detailMinPanelH {
+		return resourcePlan{}
+	}
+	disksWant := clamp(len(v.snap.Disks), 1, detailDiskMaxRows) + 2
+	disksOnly := func(h int) resourcePlan {
+		d := min(disksWant, h)
+		return resourcePlan{height: d, disks: d}
+	}
+	if !full {
+		return disksOnly(budget)
+	}
+	procsWant := clamp(len(v.snap.Procs), 1, detailProcMaxRows) + 3
+	if w < detailSideMinW {
+		p := disksOnly(budget)
+		if procs := min(procsWant, budget-p.height); procs >= detailProcMinH {
+			p.procs = procs
+			p.height += procs
+		}
+		return p
+	}
+	lw := clamp(w*42/100, 34, 76)
+	coresWant := 0
+	if n := len(v.snap.CPU.Cores); n > 0 {
+		coresWant = coreRows(n, lw-4, detailCoreMaxRows) + 2
+	}
+	h := min(max(coresWant+disksWant, procsWant), budget)
+	if h < detailProcMinH {
+		return disksOnly(h)
+	}
+	cores := min(coresWant, h-min(disksWant, h))
+	if cores < detailMinPanelH || !coresFit(len(v.snap.CPU.Cores), lw, cores) {
+		cores = 0
+		h = min(h, max(disksWant, procsWant))
+	}
+	return resourcePlan{height: h, side: true, leftW: lw, cores: cores, disks: h - cores, procs: h}
+}
+
+// body lays out the charts (with the KPI panel) and the content-sized
+// resource panels for the area below the header.
 func (s *detail) body(v detailView, w, h int) string {
 	if !v.metrics {
 		return s.waiting(v, w, h)
 	}
-	b1 := clamp(h*45/100, detailVitalsMinH, detailVitalsMaxH)
-	if h-b1 < detailMinBand2H {
-		b1 = h
-	}
-	kpiW := clamp(s.kpiWidth(v), detailKPIMinW, detailKPIMaxW)
-	charts := []chartKind{chartCPU, chartMem, chartNet}
-	inBand := 0
-	if w >= kpiW+1+detailChartMinW {
-		inBand = min(len(charts), (w-kpiW)/(detailChartMinW+1))
-	}
-	if inBand == 0 {
-		kpiW = w
-	}
-	band1 := []string{s.kpis(v, kpiW, b1)}
-	if inBand > 0 {
-		widths := widgets.SplitWidths(w-kpiW-1, inBand, 1)
-		for i, kind := range charts[:inBand] {
-			band1 = append(band1, widgets.Blank(1, b1), s.chart(v, kind, widths[i], b1))
-		}
-	}
-	blocks := []string{widgets.JoinH(band1...)}
-	if b2 := h - b1; b2 > 0 {
-		blocks = append(blocks, s.resources(v, charts[inBand:], w, b2))
+	p := s.plan(v, w, h)
+	s.cycling = p.chartRows == 0
+	blocks := []string{s.charts(v, p, w)}
+	if p.res.height > 0 {
+		blocks = append(blocks, s.resources(v, p.res, w))
 	}
 	return widgets.Fit(widgets.JoinV(blocks...), w, h)
+}
+
+// charts renders the KPI panel and the history charts in the planned
+// arrangement.
+func (s *detail) charts(v detailView, p detailPlan, w int) string {
+	grid, ok := chartGrid(p.chartRows, w, p.chartH, p.kpiW)
+	if !ok {
+		return s.singleChart(v, p.kpiW, w, p.chartH)
+	}
+	rows := make([]string, len(grid))
+	for i, row := range grid {
+		rowH := row[0].h
+		var blocks []string
+		if i == 0 {
+			blocks = append(blocks, s.kpis(v, p.kpiW, rowH))
+		}
+		for _, c := range row {
+			if len(blocks) > 0 {
+				blocks = append(blocks, widgets.Blank(1, rowH))
+			}
+			blocks = append(blocks, s.chart(v, c.kind, c.w, c.h, chartTitle(c.kind)))
+		}
+		rows[i] = widgets.JoinH(blocks...)
+	}
+	return widgets.JoinV(rows...)
+}
+
+// singleChart shows the focused chart, numbered so it is clear that "c"
+// cycles through the others, next to the KPI panel when it fits.
+func (s *detail) singleChart(v detailView, kpiW, w, h int) string {
+	kind := chartKinds[s.focus]
+	title := chartTitle(kind) + " " + strconv.Itoa(s.focus+1) + "/" + strconv.Itoa(len(chartKinds))
+	if w < kpiW+1+detailChartMinW {
+		return s.chart(v, kind, w, h, title)
+	}
+	return widgets.JoinH(s.kpis(v, kpiW, h), widgets.Blank(1, h), s.chart(v, kind, w-kpiW-1, h, title))
 }
 
 // waiting is shown when there are no values at all for the server.
@@ -377,43 +698,24 @@ func (s *detail) waiting(v detailView, w, h int) string {
 	return messagePanel(t, w, h, "Status", "", lines)
 }
 
-// resources renders the lower band: cores and disks on the left, overflow
-// charts and processes on the right (stacked when narrow).
-func (s *detail) resources(v detailView, overflow []chartKind, w, h int) string {
-	if w < detailSideMinW {
-		disksH := min(len(v.snap.Disks)+2, h/2)
-		if h < 2*detailMinBand2H || disksH < 3 {
-			return s.processes(v, w, h)
+// resources renders the planned cores, disks and processes panels.
+func (s *detail) resources(v detailView, p resourcePlan, w int) string {
+	if !p.side {
+		var blocks []string
+		if p.disks > 0 {
+			blocks = append(blocks, s.disks(v, w, p.disks))
 		}
-		return widgets.JoinV(s.disks(v, w, disksH), s.processes(v, w, h-disksH))
-	}
-	lw := clamp(w*42/100, 34, 76)
-	rw := w - lw - 1
-	return widgets.JoinH(s.leftColumn(v, lw, h), widgets.Blank(1, h), s.rightColumn(v, overflow, rw, h))
-}
-
-func (s *detail) leftColumn(v detailView, w, h int) string {
-	if h < detailCoresMinH || len(v.snap.CPU.Cores) == 0 {
-		return s.disks(v, w, h)
-	}
-	iw, _ := widgets.PanelInner(w, h)
-	coresH := min(coreRows(len(v.snap.CPU.Cores), iw, h/2-2)+2, h/2)
-	return widgets.JoinV(s.cores(v, w, coresH), s.disks(v, w, h-coresH))
-}
-
-func (s *detail) rightColumn(v detailView, overflow []chartKind, w, h int) string {
-	var blocks []string
-	left := h
-	chartH := clamp(h/3, detailChartMinH, detailChartMaxH)
-	for _, kind := range overflow {
-		if left-chartH < detailChartMinH {
-			break
+		if p.procs > 0 {
+			blocks = append(blocks, s.processes(v, w, p.procs))
 		}
-		blocks = append(blocks, s.chart(v, kind, w, chartH))
-		left -= chartH
+		return widgets.JoinV(blocks...)
 	}
-	blocks = append(blocks, s.processes(v, w, left))
-	return widgets.JoinV(blocks...)
+	var left []string
+	if p.cores > 0 {
+		left = append(left, s.cores(v, p.leftW, p.cores))
+	}
+	left = append(left, s.disks(v, p.leftW, p.disks))
+	return widgets.JoinH(widgets.JoinV(left...), widgets.Blank(1, p.height), s.processes(v, w-p.leftW-1, p.procs))
 }
 
 // kpiWidth is the panel width that fits CPU and RAM big numbers side by
@@ -523,48 +825,78 @@ func (s *detail) historyStep(h metrics.Series) time.Duration {
 	return time.Second
 }
 
-// chart renders one history chart panel.
-func (s *detail) chart(v detailView, kind chartKind, w, h int) string {
+// chartTitle is the panel title of a history chart.
+func chartTitle(kind chartKind) string {
+	switch kind {
+	case chartCPU:
+		return "CPU"
+	case chartMem:
+		return "Memory"
+	default:
+		return "Network"
+	}
+}
+
+// fitInfo returns the first candidate that fits next to title in the top
+// border of a panel w cells wide, or "" when none does.
+func fitInfo(title string, w int, candidates ...string) string {
+	avail := w - 4
+	titleW := ansi.StringWidth(title) + 3
+	for _, c := range candidates {
+		if c != "" && titleW+ansi.StringWidth(c)+2 <= avail {
+			return c
+		}
+	}
+	return ""
+}
+
+// chart renders one history chart panel over the selected time window.
+// CPU and memory are area charts on a fixed 0–100% scale; network is a
+// braille line chart of receive and transmit rates. Swap is reported in
+// the memory panel info rather than drawn, since a stacked swap band
+// would read as extra RAM.
+func (s *detail) chart(v detailView, kind chartKind, w, h int, title string) string {
 	t := s.t
 	snap := v.snap
 	iw, ih := widgets.PanelInner(w, h)
-	opts := widgets.ChartOpts{Width: iw, Height: ih, Step: s.historyStep(v.hist)}
-	var title, info string
-	var body string
+	opts := widgets.ChartOpts{Width: iw, Height: ih}
+	step, window := s.historyStep(v.hist), historyWindows[s.window]
+	var value string
+	var res windowResult
+	render := widgets.AreaChart
 	switch kind {
 	case chartCPU:
-		title = "CPU"
-		info = format.Percent(snap.CPU.Total) + glyphSep + "load " + loadText(snap.Load.One)
-		opts.Max = 100
-		opts.YLabel = format.Percent
-		opts.Series = []widgets.Series{{Name: "cpu", Values: v.hist.CPU, Color: s.seriesColor(t.P.Accent, v.dim)}}
-		body = widgets.AreaChart(t, opts)
+		value = format.Percent(snap.CPU.Total) + glyphSep + "load " + loadText(snap.Load.One)
+		opts.Max, opts.YLabel = 100, format.Percent
+		res = applyWindow(opts, step, window, 1, []windowSeries{
+			{name: "cpu", values: v.hist.CPU, color: s.seriesColor(t.P.Accent, v.dim), reduce: bucketMax},
+		})
 	case chartMem:
-		title = "Memory"
-		info = format.Percent(snap.Mem.UsedPct())
+		value = format.Percent(snap.Mem.UsedPct())
 		if snap.Mem.SwapTotal > 0 {
-			info += glyphSep + "swap " + format.Percent(snap.Mem.SwapPct())
+			value += glyphSep + "swap " + format.Percent(snap.Mem.SwapPct())
 		}
-		opts.Max = 100
-		opts.YLabel = format.Percent
-		opts.Series = []widgets.Series{{Name: "ram", Values: v.hist.Mem, Color: s.seriesColor(t.P.Teal, v.dim)}}
-		if snap.Mem.SwapTotal > 0 {
-			opts.Series = append(opts.Series, widgets.Series{Name: "swap", Values: v.hist.Swap, Color: s.seriesColor(t.P.Blue, v.dim)})
-			body = widgets.LineChart(t, opts)
-		} else {
-			body = widgets.AreaChart(t, opts)
-		}
+		opts.Max, opts.YLabel = 100, format.Percent
+		res = applyWindow(opts, step, window, 1, []windowSeries{
+			{name: "ram", values: v.hist.Mem, color: s.seriesColor(t.P.Teal, v.dim), reduce: bucketMean},
+		})
 	default:
-		title = "Network"
-		info = glyphDown + " " + format.Bits(snap.Net.RxBps) + "  " + glyphUp + " " + format.Bits(snap.Net.TxBps)
+		value = glyphDown + " " + format.Bits(snap.Net.RxBps) + "  " + glyphUp + " " + format.Bits(snap.Net.TxBps)
 		opts.YLabel = format.Bits
-		opts.Series = []widgets.Series{
-			{Name: "rx", Values: v.hist.RxBps, Color: s.seriesColor(t.P.Accent2, v.dim)},
-			{Name: "tx", Values: v.hist.TxBps, Color: s.seriesColor(t.P.Accent, v.dim)},
-		}
-		body = widgets.LineChart(t, opts)
+		res = applyWindow(opts, step, window, 2, []windowSeries{
+			{name: "rx", values: v.hist.RxBps, color: s.seriesColor(t.P.Accent2, v.dim), reduce: bucketMean},
+			{name: "tx", values: v.hist.TxBps, color: s.seriesColor(t.P.Accent, v.dim), reduce: bucketMean},
+		})
+		render = widgets.LineChart
 	}
-	return widgets.Panel(t, widgets.PanelOpts{Width: w, Height: h, Title: title, Info: info, Body: body})
+	opts.Series, opts.Step = res.series, res.step
+	span := windowLabel(window)
+	if res.span > 0 {
+		span = windowLabel(res.span)
+	}
+	short, _, _ := strings.Cut(value, glyphSep)
+	info := fitInfo(title, w, value+glyphSep+span, short+glyphSep+span, span)
+	return widgets.Panel(t, widgets.PanelOpts{Width: w, Height: h, Title: title, Info: info, Body: render(t, opts)})
 }
 
 // Core grid sizing.
@@ -585,15 +917,30 @@ func coreRows(n, iw, maxRows int) int {
 	return clamp((n+cols-1)/cols, 1, max(maxRows, 1))
 }
 
+// coreGridColumns is the number of core cells per row for n cores in an
+// iw×ih grid: as many full-size cells as fit, narrower cells when the
+// rows would not hold all cores.
+func coreGridColumns(n, iw, ih int) int {
+	cols := coreColumns(iw)
+	if rows := (n + cols - 1) / cols; rows > ih && ih > 0 {
+		cols = min((n+ih-1)/ih, max(iw/(coreCellMinW-4+coreCellGap), 1))
+	}
+	return cols
+}
+
+// coresFit reports whether a cores panel of w×h shows every one of n
+// cores.
+func coresFit(n, w, h int) bool {
+	iw, ih := widgets.PanelInner(w, h)
+	return n <= coreGridColumns(n, iw, ih)*ih
+}
+
 // cores renders a compact grid of per-core utilization bars.
 func (s *detail) cores(v detailView, w, h int) string {
 	t := s.t
 	cores := v.snap.CPU.Cores
 	iw, ih := widgets.PanelInner(w, h)
-	cols := coreColumns(iw)
-	if rows := (len(cores) + cols - 1) / cols; rows > ih && ih > 0 {
-		cols = min((len(cores)+ih-1)/ih, max(iw/(coreCellMinW-4+coreCellGap), 1))
-	}
+	cols := coreGridColumns(len(cores), iw, ih)
 	widths := widgets.SplitWidths(iw, cols, coreCellGap)
 	labelW := len("c"+strconv.Itoa(len(cores)-1)) + 1
 	var lines []string
@@ -692,7 +1039,7 @@ func (s *detail) processes(v detailView, w, h int) string {
 	}, iw)
 	columns, cells := tableData(cols, procs)
 	return widgets.Panel(t, widgets.PanelOpts{
-		Width: w, Height: h, Title: "Processes", Info: "top " + strconv.Itoa(len(procs)) + " by cpu",
+		Width: w, Height: h, Title: "Processes", Info: "top " + strconv.Itoa(min(len(procs), max(ih-1, 0))) + " by cpu",
 		Body: widgets.Table(t, widgets.TableOpts{
 			Width: iw, Height: ih, Columns: columns, Rows: cells, Selected: -1,
 			Empty: "no process data",
