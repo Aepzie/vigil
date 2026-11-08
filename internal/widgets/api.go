@@ -2,57 +2,9 @@ package widgets
 
 import (
 	"strings"
-	"time"
 
 	"github.com/CraguS/vigil/internal/theme"
 )
-
-// Series is one data series for charts. Values are ordered oldest to
-// newest; the newest value is drawn at the right edge.
-type Series struct {
-	Name   string
-	Values []float64
-	Color  theme.RGB
-}
-
-// ChartOpts configures AreaChart and LineChart.
-type ChartOpts struct {
-	Width  int
-	Height int
-	// Series are stacked bottom to top for AreaChart and overlaid for
-	// LineChart.
-	Series []Series
-	// Max fixes the top of the Y scale. Zero means auto: the "nice"
-	// (1/2/5 × 10^n) ceiling of the largest stacked value.
-	Max float64
-	// Step is the sampling interval between values, used for X labels
-	// such as "-60s", "-30s", "now".
-	Step time.Duration
-	// YLabel formats Y axis values; nil uses format.Number.
-	YLabel func(float64) string
-	// HideAxes drops the Y and X axis (used for compact panels).
-	HideAxes bool
-}
-
-// AreaChart renders stacked bands of ▁▂▃▄▅▆▇█ with 1/8-cell vertical
-// resolution, a light-at-top to darker-at-base gradient per band, dotted
-// ┈ grid lines, a nice-scaled Y axis and a time X axis. Output is exactly
-// Width×Height cells.
-func AreaChart(t *theme.Theme, o ChartOpts) string {
-	return Blank(o.Width, o.Height)
-}
-
-// LineChart renders series as braille dot lines (2×4 dots per cell) with
-// the same axes and grid as AreaChart. Output is exactly Width×Height.
-func LineChart(t *theme.Theme, o ChartOpts) string {
-	return Blank(o.Width, o.Height)
-}
-
-// NiceScale returns a "nice" axis maximum ≥ maxValue and the tick step,
-// using 1/2/5 × 10^n steps and roughly the requested number of ticks.
-func NiceScale(maxValue float64, ticks int) (niceMax, step float64) {
-	return maxValue, maxValue
-}
 
 // Sparkline renders the last width values as a one-line ▁..█ sparkline in
 // color c. max ≤ 0 means auto-scale to the largest value. Output is exactly
@@ -192,11 +144,4 @@ func Gradient(text string, from, to theme.RGB) string {
 // outside fg. bg's dimensions are preserved.
 func Overlay(bg, fg string, x, y int) string {
 	return bg
-}
-
-func max0(v int) int {
-	if v < 0 {
-		return 0
-	}
-	return v
 }
