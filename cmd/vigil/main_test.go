@@ -77,6 +77,48 @@ func TestParseFlagsInterleaved(t *testing.T) {
 	}
 }
 
+func TestParseFlagsTerminator(t *testing.T) {
+	tests := []struct {
+		args      []string
+		want      []string
+		wantStdin bool
+		wantData  string
+	}{
+		{[]string{"--", "-bob", "--password-stdin"}, []string{"-bob", "--password-stdin"}, false, ""},
+		{[]string{"--", "--data", "x"}, []string{"--data", "x"}, false, ""},
+		{[]string{"--password-stdin", "--", "--data", "x"}, []string{"--data", "x"}, true, ""},
+		{[]string{"-password-stdin=false", "--", "-password-stdin"}, []string{"-password-stdin"}, false, ""},
+		{[]string{"--data=/d", "--", "--", "-x"}, []string{"--", "-x"}, false, "/d"},
+		{[]string{"bob", "--", "--password-stdin"}, []string{"bob", "--password-stdin"}, false, ""},
+		{[]string{"bob", "--data", "/d", "--", "-x"}, []string{"bob", "-x"}, false, "/d"},
+		{[]string{"--data", "--", "bob", "--password-stdin"}, []string{"bob"}, true, "--"},
+		{[]string{"-data", "--", "--", "--password-stdin"}, []string{"--password-stdin"}, false, "--"},
+		{[]string{"--"}, nil, false, ""},
+	}
+	for _, tt := range tests {
+		fs := flag.NewFlagSet("t", flag.ContinueOnError)
+		fs.SetOutput(io.Discard)
+		data := fs.String("data", "", "")
+		stdin := fs.Bool("password-stdin", false, "")
+		got, err := parseFlags(fs, tt.args)
+		if err != nil {
+			t.Fatalf("parseFlags(%q): %v", tt.args, err)
+		}
+		if !slices.Equal(got, tt.want) || *stdin != tt.wantStdin || *data != tt.wantData {
+			t.Errorf("parseFlags(%q) = %q stdin=%v data=%q; want %q stdin=%v data=%q",
+				tt.args, got, *stdin, *data, tt.want, tt.wantStdin, tt.wantData)
+		}
+	}
+}
+
+func TestUserAddTerminatorKeepsFlagsPositional(t *testing.T) {
+	std, _, _ := testIO("")
+	err := dispatch([]string{"user", "add", "--data", t.TempDir(), "--", "-bob", "--password-stdin"}, std)
+	if err == nil || !strings.Contains(err.Error(), `unexpected argument "--password-stdin"`) {
+		t.Fatalf("user add -- -bob --password-stdin = %v, want an unexpected-argument error", err)
+	}
+}
+
 func TestParseSize(t *testing.T) {
 	tests := []struct {
 		in   string
