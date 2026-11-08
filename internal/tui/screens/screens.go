@@ -34,7 +34,7 @@ func NewServers(d *ui.Deps) ui.Screen { return newServers(d) }
 func NewDetail(d *ui.Deps) ui.Screen { return newDetail(d) }
 
 // NewAlerts lists active and resolved alerts.
-func NewAlerts(d *ui.Deps) ui.Screen { return placeholder{ui.TabAlerts, "Alerts", "⚡"} }
+func NewAlerts(d *ui.Deps) ui.Screen { return newAlerts(d) }
 
 // NewSettings edits thresholds and shows manager info.
 func NewSettings(d *ui.Deps) ui.Screen { return placeholder{ui.TabSettings, "Settings", "✱"} }
