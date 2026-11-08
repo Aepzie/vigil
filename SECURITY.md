@@ -56,6 +56,14 @@ remote user**, so dashboard accounts are as sensitive as that access.
   and per-server keys must not be readable by group or others, and
   `authorized_keys` must not be writable by them; files that fail these
   checks are refused.
+- A server's SSH password can be entered in the dashboard (Servers form
+  or `p`) to install the manager key: vigil logs in once with it
+  (password or keyboard-interactive authentication, after the usual host
+  key check), appends the manager public key, passed on stdin, to the
+  remote user's `~/.ssh/authorized_keys` and verifies key login. The
+  password is kept in memory only for that login and is never persisted,
+  logged or shown; errors never contain it. The feature is unavailable in
+  demo and public sessions.
 - Per-server private keys can only be referenced by file name inside
   `<data>/keys/`. Absolute paths, `..`, `~` and symlinks leaving the
   directory are rejected, and key errors are reported generically, so a
