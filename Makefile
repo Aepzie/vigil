@@ -5,7 +5,8 @@ VERSION  ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev
 LDFLAGS  := -s -w -X main.version=$(VERSION)
 SIZE     ?= 150x44
 SHOTS    ?= docs/screenshots
-TABS     := overview servers detail alerts settings
+TABS     := overview detail servers alerts settings
+RENDER   := ./$(BINARY) render --format svg
 
 .PHONY: all build install test race cover lint vet fmt fmt-check run-demo screenshots cross clean help
 
@@ -41,10 +42,11 @@ fmt: ## Format all Go files
 run-demo: ## Run the dashboard with a synthetic fleet
 	$(GO) run ./cmd/vigil demo
 
-screenshots: build ## Render every tab to $(SHOTS)/<tab>.ans (ANSI text)
+screenshots: build ## Render every tab to $(SHOTS)/<tab>-<size>.svg
 	mkdir -p $(SHOTS)
-	for tab in $(TABS); do ./$(BINARY) render --size $(SIZE) --tab $$tab > $(SHOTS)/$$tab.ans; done
-	./$(BINARY) render --size $(SIZE) --compat ascii > $(SHOTS)/overview-ascii.ans
+	for tab in $(TABS); do $(RENDER) --size $(SIZE) --tab $$tab --out $(SHOTS)/$$tab-$(SIZE).svg; done
+	$(RENDER) --size 80x24 --tab overview --out $(SHOTS)/overview-80x24.svg
+	$(RENDER) --size 220x60 --tab detail --out $(SHOTS)/detail-220x60.svg
 
 cross: ## Check that linux, darwin and windows builds compile
 	GOOS=linux   GOARCH=amd64 $(GO) build -o /dev/null ./...
