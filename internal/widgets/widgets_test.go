@@ -174,7 +174,7 @@ func TestChartAxes(t *testing.T) {
 	}
 
 	line := strings.Split(ansi.Strip(LineChart(th, o)), "\n")
-	if !strings.Contains(line[len(line)-1], "-60s") {
+	if !strings.Contains(line[len(line)-1], "-1m") {
 		t.Errorf("line chart covers two samples per column: %q", line[len(line)-1])
 	}
 }
@@ -310,17 +310,45 @@ func TestCompactDuration(t *testing.T) {
 }
 
 func TestXInterval(t *testing.T) {
-	tests := map[time.Duration]time.Duration{
-		time.Second:            10 * time.Second,
-		2 * time.Second:        30 * time.Second,
-		3 * time.Second:        30 * time.Second,
-		time.Minute:            10 * time.Minute,
-		100 * time.Millisecond: time.Second,
+	tests := []struct {
+		span, total, want time.Duration
+	}{
+		{time.Second, 60 * time.Second, 10 * time.Second},
+		{2 * time.Second, 2 * time.Minute, 30 * time.Second},
+		{3 * time.Second, 2 * time.Minute, 30 * time.Second},
+		{100 * time.Millisecond, 10 * time.Second, time.Second},
+		{time.Minute, time.Hour, 10 * time.Minute},
+		{3 * time.Second, 8 * time.Minute, time.Minute},
+		{2 * time.Second, 5 * time.Minute, time.Minute},
+		{10 * time.Second, 30 * time.Minute, 2 * time.Minute},
+		{5 * time.Minute, 12 * time.Hour, time.Hour},
 	}
-	for span, want := range tests {
-		if got := xInterval(span); got != want {
-			t.Errorf("xInterval(%v) = %v, want %v", span, got, want)
+	for _, tt := range tests {
+		if got := xInterval(tt.span, tt.total); got != tt.want {
+			t.Errorf("xInterval(%v, %v) = %v, want %v", tt.span, tt.total, got, tt.want)
 		}
+	}
+}
+
+func TestChartXLabelsUseMinutesOnLongSpans(t *testing.T) {
+	th := theme.Default()
+	values := make([]float64, 200)
+	for i := range values {
+		values[i] = float64(i % 50)
+	}
+	out := ansi.Strip(AreaChart(th, ChartOpts{
+		Width: 200, Height: 12, Step: 2 * time.Second,
+		Series: []Series{{Name: "cpu", Values: values, Color: th.P.Accent}},
+	}))
+	lines := strings.Split(out, "\n")
+	axis := lines[len(lines)-1]
+	for _, bad := range []string{"-270s", "-210s", "-150s", "-330s"} {
+		if strings.Contains(axis, bad) {
+			t.Fatalf("axis %q contains %q", axis, bad)
+		}
+	}
+	if !strings.Contains(axis, "-2m") || !strings.Contains(axis, "now") {
+		t.Fatalf("axis %q lacks minute labels", axis)
 	}
 }
 
@@ -785,6 +813,24 @@ func TestLayoutHelpers(t *testing.T) {
 				assertBlock(t, "Center", Center(s, w), w, 1)
 				assertBlock(t, "SpreadLine", SpreadLine(s, "right", w), w, 1)
 			}
+		}
+	}
+}
+
+func TestAxisDuration(t *testing.T) {
+	tests := []struct {
+		age, interval time.Duration
+		want          string
+	}{
+		{time.Minute, time.Minute, "1m"},
+		{4 * time.Minute, time.Minute, "4m"},
+		{60 * time.Second, 30 * time.Second, "60s"},
+		{90 * time.Second, 30 * time.Second, "90s"},
+		{3 * time.Hour, time.Hour, "3h"},
+	}
+	for _, tt := range tests {
+		if got := axisDuration(tt.age, tt.interval); got != tt.want {
+			t.Errorf("axisDuration(%v, %v) = %q, want %q", tt.age, tt.interval, got, tt.want)
 		}
 	}
 }

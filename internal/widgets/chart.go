@@ -244,14 +244,14 @@ func (f chartFrame) xAxis(p *painter, t *theme.Theme, step time.Duration, sample
 	}
 	colSpan := step * time.Duration(max(samplesPerCol, 1))
 	if colSpan > 0 {
-		interval := xInterval(colSpan)
+		interval := xInterval(colSpan, colSpan*time.Duration(w))
 		for k := 1; ; k++ {
 			age := interval * time.Duration(k)
 			col := w - 1 - int(math.Round(float64(age)/float64(colSpan)))
 			if col < 0 {
 				break
 			}
-			padded := " -" + compactDuration(age) + " "
+			padded := " -" + axisDuration(age, interval) + " "
 			place(padded, col+len([]rune(padded))/2)
 		}
 	}
@@ -278,20 +278,49 @@ var niceIntervals = []time.Duration{
 }
 
 // xInterval picks the smallest nice duration that spaces labels at least
-// minXLabelGap columns apart.
-func xInterval(colSpan time.Duration) time.Duration {
+// minXLabelGap columns apart. When the plot spans more than two minutes
+// (hours, days) only whole minutes (hours, days) qualify, so labels such
+// as "-270s" never appear next to "-4m".
+func xInterval(colSpan, total time.Duration) time.Duration {
 	minGap := colSpan * minXLabelGap
-	for _, d := range niceIntervals {
-		if d >= minGap && d%colSpan == 0 {
-			return d
+	unit := labelUnit(total)
+	fits := func(d time.Duration, aligned bool) bool {
+		return d >= minGap && d%unit == 0 && (!aligned || d%colSpan == 0)
+	}
+	for _, aligned := range []bool{true, false} {
+		for _, d := range niceIntervals {
+			if fits(d, aligned) {
+				return d
+			}
 		}
 	}
-	for _, d := range niceIntervals {
-		if d >= minGap {
-			return d
-		}
+	return max(minGap, unit)
+}
+
+// labelUnit is the smallest unit X labels may use for a plot spanning
+// total.
+func labelUnit(total time.Duration) time.Duration {
+	day := 24 * time.Hour
+	switch {
+	case total > 2*day:
+		return day
+	case total > 2*time.Hour:
+		return time.Hour
+	case total > 2*time.Minute:
+		return time.Minute
+	default:
+		return time.Nanosecond
 	}
-	return minGap
+}
+
+// axisDuration labels age on an axis whose ticks are interval apart:
+// minute ticks always read in minutes ("-1m", "-4m") so they never mix
+// with seconds.
+func axisDuration(age, interval time.Duration) string {
+	if interval%time.Minute == 0 && age%time.Minute == 0 && age < 2*time.Hour {
+		return strconv.FormatInt(int64(age/time.Minute), 10) + "m"
+	}
+	return compactDuration(age)
 }
 
 // compactDuration renders d in the single largest unit that divides it
