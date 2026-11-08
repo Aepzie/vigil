@@ -7,6 +7,7 @@ import (
 	"math/rand/v2"
 	"net"
 	"net/netip"
+	"runtime"
 	"sync"
 	"time"
 
@@ -294,4 +295,65 @@ func remoteIP(addr net.Addr) string {
 		return addr.String()
 	}
 	return host
+}
+
+// Limits for work an unauthenticated client can cause.
+const (
+	// maxPreAuthPerClient and maxPreAuthTotal bound connections that have
+	// not authenticated yet, per client (see clientKey) and overall.
+	maxPreAuthPerClient = 8
+	maxPreAuthTotal     = 256
+)
+
+// maxPasswordChecks bounds concurrent password hash checks; each takes
+// tens of milliseconds of CPU at bcrypt cost 12.
+var maxPasswordChecks = 2 * runtime.NumCPU()
+
+// connLimiter bounds concurrent connections per client key and in total.
+type connLimiter struct {
+	mu        sync.Mutex
+	perClient int
+	total     int
+	active    int
+	byClient  map[string]int
+}
+
+func newConnLimiter(perClient, total int) *connLimiter {
+	return &connLimiter{perClient: perClient, total: total, byClient: make(map[string]int)}
+}
+
+// acquire reserves a slot for key. It fails when key or the whole server
+// is at its limit. release frees the slot; it may be called repeatedly.
+func (l *connLimiter) acquire(key string) (release func(), ok bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.active >= l.total || l.byClient[key] >= l.perClient {
+		return nil, false
+	}
+	l.active++
+	l.byClient[key]++
+	var once sync.Once
+	return func() { once.Do(func() { l.release(key) }) }, true
+}
+
+func (l *connLimiter) release(key string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.active--
+	l.byClient[key]--
+	if l.byClient[key] <= 0 {
+		delete(l.byClient, key)
+	}
+}
+
+// releasingConn calls release once the connection is closed.
+type releasingConn struct {
+	net.Conn
+	release func()
+}
+
+func (c *releasingConn) Close() error {
+	err := c.Conn.Close()
+	c.release()
+	return err
 }
