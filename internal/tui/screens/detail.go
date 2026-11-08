@@ -45,10 +45,15 @@ const (
 	detailNext
 	detailShell
 	detailPoll
+	detailSetWindow
 )
 
-// detailActionMsg carries a palette command back into Update.
-type detailActionMsg struct{ action detailAction }
+// detailActionMsg carries a palette command back into Update. window
+// indexes historyWindows for detailSetWindow.
+type detailActionMsg struct {
+	action detailAction
+	window int
+}
 
 // detail shows one server in depth.
 type detail struct {
@@ -59,10 +64,16 @@ type detail struct {
 	// lastGood keeps the most recent online snapshot per server so an
 	// offline server can still show its last known values (dimmed).
 	lastGood map[string]metrics.Snapshot
+	// window indexes historyWindows: the time span of the charts.
+	window int
 }
 
 func newDetail(d *ui.Deps) *detail {
-	return &detail{d: d, t: themeOf(d), fleet: initialFleet(d), lastGood: map[string]metrics.Snapshot{}}
+	return &detail{
+		d: d, t: themeOf(d), fleet: initialFleet(d),
+		lastGood: map[string]metrics.Snapshot{},
+		window:   defaultHistoryWindow,
+	}
 }
 
 func (s *detail) Tab() ui.TabID   { return ui.TabDetail }
@@ -109,7 +120,7 @@ func (s *detail) Update(msg tea.Msg) (ui.Screen, tea.Cmd) {
 	case ui.ShowDetailMsg:
 		s.selected = msg.ServerID
 	case detailActionMsg:
-		return s, s.apply(msg.action)
+		return s, s.apply(msg)
 	case tea.KeyPressMsg:
 		return s, s.key(msg)
 	}
@@ -133,8 +144,8 @@ func (s *detail) absorb(f ui.Fleet) {
 	}
 }
 
-func (s *detail) apply(a detailAction) tea.Cmd {
-	switch a {
+func (s *detail) apply(msg detailActionMsg) tea.Cmd {
+	switch msg.action {
 	case detailPrev:
 		s.step(-1)
 	case detailNext:
@@ -143,6 +154,10 @@ func (s *detail) apply(a detailAction) tea.Cmd {
 		return s.shellCmd()
 	case detailPoll:
 		return pollServer(s.d, s.fleet, s.selectedID())
+	case detailSetWindow:
+		if msg.window >= 0 && msg.window < len(historyWindows) {
+			s.window = msg.window
+		}
 	}
 	return nil
 }
@@ -157,6 +172,8 @@ func (s *detail) key(msg tea.KeyPressMsg) tea.Cmd {
 		return s.shellCmd()
 	case "r":
 		return pollServer(s.d, s.fleet, s.selectedID())
+	case "w":
+		s.window = nextWindow(s.window)
 	}
 	return nil
 }
@@ -182,7 +199,7 @@ func (s *detail) Hints() []ui.Hint {
 	if len(s.fleet.Servers) == 0 {
 		return []ui.Hint{hint("2", "add server")}
 	}
-	return []ui.Hint{hint("[ ]", "prev/next"), hint("enter", "shell"), hint("r", "poll")}
+	return []ui.Hint{hint("[ ]", "prev/next"), hint("w", "window"), hint("enter", "shell"), hint("r", "poll")}
 }
 
 // Commands implements ui.Screen.
@@ -190,12 +207,22 @@ func (s *detail) Commands() []ui.Command {
 	act := func(a detailAction) func() tea.Cmd {
 		return func() tea.Cmd { return emit(detailActionMsg{action: a}) }
 	}
-	return []ui.Command{
+	cmds := []ui.Command{
 		{Title: "Previous server", Hint: "[", Run: act(detailPrev)},
 		{Title: "Next server", Hint: "]", Run: act(detailNext)},
 		{Title: "Open shell on this server", Hint: "enter", Run: act(detailShell)},
 		{Title: "Poll this server now", Hint: "r", Run: act(detailPoll)},
 	}
+	for i, d := range historyWindows {
+		cmds = append(cmds, ui.Command{
+			Title: "Chart window " + windowLabel(d),
+			Hint:  "w",
+			Run: func() tea.Cmd {
+				return emit(detailActionMsg{action: detailSetWindow, window: i})
+			},
+		})
+	}
+	return cmds
 }
 
 // view is everything needed to render one frame of the Detail screen.
@@ -428,7 +455,7 @@ func (s *detail) body(v detailView, w, h int) string {
 	if inBand > 0 {
 		widths := widgets.SplitWidths(w-kpiW-1, inBand, 1)
 		for i, kind := range charts[:inBand] {
-			band1 = append(band1, widgets.Blank(1, b1), s.chart(v, kind, widths[i], b1))
+			band1 = append(band1, widgets.Blank(1, b1), s.chart(v, kind, widths[i], b1, chartTitle(kind)))
 		}
 	}
 	blocks := []string{widgets.JoinH(band1...)}
@@ -489,7 +516,7 @@ func (s *detail) rightColumn(v detailView, overflow []chartKind, w, h int) strin
 		if left-chartH < detailChartMinH {
 			break
 		}
-		blocks = append(blocks, s.chart(v, kind, w, chartH))
+		blocks = append(blocks, s.chart(v, kind, w, chartH, chartTitle(kind)))
 		left -= chartH
 	}
 	blocks = append(blocks, s.processes(v, w, left))
@@ -603,48 +630,78 @@ func (s *detail) historyStep(h metrics.Series) time.Duration {
 	return time.Second
 }
 
-// chart renders one history chart panel.
-func (s *detail) chart(v detailView, kind chartKind, w, h int) string {
+// chartTitle is the panel title of a history chart.
+func chartTitle(kind chartKind) string {
+	switch kind {
+	case chartCPU:
+		return "CPU"
+	case chartMem:
+		return "Memory"
+	default:
+		return "Network"
+	}
+}
+
+// fitInfo returns the first candidate that fits next to title in the top
+// border of a panel w cells wide, or "" when none does.
+func fitInfo(title string, w int, candidates ...string) string {
+	avail := w - 4
+	titleW := ansi.StringWidth(title) + 3
+	for _, c := range candidates {
+		if c != "" && titleW+ansi.StringWidth(c)+2 <= avail {
+			return c
+		}
+	}
+	return ""
+}
+
+// chart renders one history chart panel over the selected time window.
+// CPU and memory are area charts on a fixed 0–100% scale; network is a
+// braille line chart of receive and transmit rates. Swap is reported in
+// the memory panel info rather than drawn, since a stacked swap band
+// would read as extra RAM.
+func (s *detail) chart(v detailView, kind chartKind, w, h int, title string) string {
 	t := s.t
 	snap := v.snap
 	iw, ih := widgets.PanelInner(w, h)
-	opts := widgets.ChartOpts{Width: iw, Height: ih, Step: s.historyStep(v.hist)}
-	var title, info string
-	var body string
+	opts := widgets.ChartOpts{Width: iw, Height: ih}
+	step, window := s.historyStep(v.hist), historyWindows[s.window]
+	var value string
+	var res windowResult
+	render := widgets.AreaChart
 	switch kind {
 	case chartCPU:
-		title = "CPU"
-		info = format.Percent(snap.CPU.Total) + glyphSep + "load " + loadText(snap.Load.One)
-		opts.Max = 100
-		opts.YLabel = format.Percent
-		opts.Series = []widgets.Series{{Name: "cpu", Values: v.hist.CPU, Color: s.seriesColor(t.P.Accent, v.dim)}}
-		body = widgets.AreaChart(t, opts)
+		value = format.Percent(snap.CPU.Total) + glyphSep + "load " + loadText(snap.Load.One)
+		opts.Max, opts.YLabel = 100, format.Percent
+		res = applyWindow(opts, step, window, 1, []windowSeries{
+			{name: "cpu", values: v.hist.CPU, color: s.seriesColor(t.P.Accent, v.dim), reduce: bucketMax},
+		})
 	case chartMem:
-		title = "Memory"
-		info = format.Percent(snap.Mem.UsedPct())
+		value = format.Percent(snap.Mem.UsedPct())
 		if snap.Mem.SwapTotal > 0 {
-			info += glyphSep + "swap " + format.Percent(snap.Mem.SwapPct())
+			value += glyphSep + "swap " + format.Percent(snap.Mem.SwapPct())
 		}
-		opts.Max = 100
-		opts.YLabel = format.Percent
-		opts.Series = []widgets.Series{{Name: "ram", Values: v.hist.Mem, Color: s.seriesColor(t.P.Teal, v.dim)}}
-		if snap.Mem.SwapTotal > 0 {
-			opts.Series = append(opts.Series, widgets.Series{Name: "swap", Values: v.hist.Swap, Color: s.seriesColor(t.P.Blue, v.dim)})
-			body = widgets.LineChart(t, opts)
-		} else {
-			body = widgets.AreaChart(t, opts)
-		}
+		opts.Max, opts.YLabel = 100, format.Percent
+		res = applyWindow(opts, step, window, 1, []windowSeries{
+			{name: "ram", values: v.hist.Mem, color: s.seriesColor(t.P.Teal, v.dim), reduce: bucketMean},
+		})
 	default:
-		title = "Network"
-		info = glyphDown + " " + format.Bits(snap.Net.RxBps) + "  " + glyphUp + " " + format.Bits(snap.Net.TxBps)
+		value = glyphDown + " " + format.Bits(snap.Net.RxBps) + "  " + glyphUp + " " + format.Bits(snap.Net.TxBps)
 		opts.YLabel = format.Bits
-		opts.Series = []widgets.Series{
-			{Name: "rx", Values: v.hist.RxBps, Color: s.seriesColor(t.P.Accent2, v.dim)},
-			{Name: "tx", Values: v.hist.TxBps, Color: s.seriesColor(t.P.Accent, v.dim)},
-		}
-		body = widgets.LineChart(t, opts)
+		res = applyWindow(opts, step, window, 2, []windowSeries{
+			{name: "rx", values: v.hist.RxBps, color: s.seriesColor(t.P.Accent2, v.dim), reduce: bucketMean},
+			{name: "tx", values: v.hist.TxBps, color: s.seriesColor(t.P.Accent, v.dim), reduce: bucketMean},
+		})
+		render = widgets.LineChart
 	}
-	return widgets.Panel(t, widgets.PanelOpts{Width: w, Height: h, Title: title, Info: info, Body: body})
+	opts.Series, opts.Step = res.series, res.step
+	span := windowLabel(window)
+	if res.span > 0 {
+		span = windowLabel(res.span)
+	}
+	short, _, _ := strings.Cut(value, glyphSep)
+	info := fitInfo(title, w, value+glyphSep+span, short+glyphSep+span, span)
+	return widgets.Panel(t, widgets.PanelOpts{Width: w, Height: h, Title: title, Info: info, Body: render(t, opts)})
 }
 
 // Core grid sizing.
