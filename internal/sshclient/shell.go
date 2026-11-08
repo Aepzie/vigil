@@ -11,6 +11,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
+	"github.com/Aepzie/vigil/internal/sanitize"
 	"github.com/Aepzie/vigil/internal/store"
 )
 
@@ -22,6 +23,10 @@ const (
 	// notice a read deadline before giving up on it.
 	stdinUnblockWait = 250 * time.Millisecond
 )
+
+// shellErrorPause keeps a connection error on screen long enough to read
+// before Run returns to the dashboard. It is a variable for tests.
+var shellErrorPause = 2500 * time.Millisecond
 
 // Shell is an interactive remote login shell. It implements
 // tea.ExecCommand (Run, SetStdin, SetStdout, SetStderr).
@@ -101,10 +106,14 @@ func (s *Shell) size() (width, height int) {
 // whatever its exit status; dial, authentication and session setup
 // failures are returned as errors.
 func (s *Shell) Run() error {
+	target := sanitize.Line(s.srv.User) + "@" + sanitize.Line(serverAddr(s.srv))
+	s.notice("\x1b[2J\x1b[H  connecting to " + target + " ...\r\n")
 	ctx, cancel := context.WithTimeout(context.Background(), DefaultDialTimeout)
 	client, err := s.dialer.Dial(ctx, s.srv)
 	cancel()
 	if err != nil {
+		s.notice("\r\n  could not connect to " + target + ": " + Reason(err) + "\r\n  returning to the dashboard ...\r\n")
+		time.Sleep(shellErrorPause)
 		return err
 	}
 	defer client.Close()
@@ -233,6 +242,14 @@ func shellLang() string {
 		return lang
 	}
 	return "C.UTF-8"
+}
+
+// notice writes a status line for the user to the shell's output before
+// the remote session exists. Write errors are irrelevant here.
+func (s *Shell) notice(text string) {
+	if s.stdout != nil {
+		_, _ = io.WriteString(s.stdout, text)
+	}
 }
 
 func writerOrDiscard(w io.Writer) io.Writer {
