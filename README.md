@@ -131,15 +131,29 @@ that path: read it, change the password, then delete the file.
 ### Authorize the manager on your servers
 
 vigil logs in to every monitored server with its own key,
-`<data>/id_ed25519`, generated on first start. Print the public half at
-any time with
+`<data>/id_ed25519`, generated on first start. The public half has to be
+listed in `~/.ssh/authorized_keys` of the remote user vigil should use on
+each server.
+
+The easiest way is to let the dashboard install it: press `a` on the
+**Servers** tab and fill in the server's SSH **Password** along with the
+other fields, or select an existing server and press `p`. vigil logs in
+once with the password, appends the manager key to
+`~/.ssh/authorized_keys` (creating `~/.ssh` with mode `0700` if needed,
+and skipping the key if it is already listed), and checks that key login
+works. The password is used for this single login only: it is never
+stored, written to disk or logged. Polling and shells keep using the key.
+For this one-time step the server's sshd must allow password (or
+keyboard-interactive) login for that user; servers with a per-server key
+are not supported.
+
+To install the key by hand instead, print it at any time with
 
 ```bash
 vigil pubkey
 ```
 
-and append it to `~/.ssh/authorized_keys` of the remote user vigil should
-use on each server, for example:
+and append it to `~/.ssh/authorized_keys` of the remote user, for example:
 
 ```bash
 vigil pubkey | ssh ops@web-01 'mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys'
@@ -156,7 +170,8 @@ ssh admin@manager -p 2222
 ```
 
 Open the **Servers** tab (`2`), press `a` and fill in name, host, port,
-user, an optional SSH key and tags. The key defaults to the manager key;
+user, an optional password (to install the manager key, see above), an
+optional SSH key and tags. The key defaults to the manager key;
 to use a different one, copy the unencrypted private key into
 `<data>/keys/` (mode `0600`, owned by the vigil user) and enter its file
 name, e.g. `deploy_ed25519`. Paths outside that directory are rejected, so
@@ -220,6 +235,7 @@ Servers:
 | `a` / `e` / `x` | add / edit / delete a server (`y`/`n` to confirm deletion) |
 | `enter` | open a shell on the server |
 | `t` | test the connection |
+| `p` | install the manager key with a one-time password (`enter` installs, `esc` cancels) |
 | `d` | server detail |
 | `tab` / `shift+tab`, `ctrl+s`, `esc` | in the form: next / previous field, save, cancel |
 

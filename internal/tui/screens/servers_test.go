@@ -351,7 +351,7 @@ func TestServersReadOnly(t *testing.T) {
 	s := newServers(d)
 	s.Update(ui.FleetMsg{Fleet: fakeFleet()})
 
-	for _, key := range []string{"a", "e", "x", "delete"} {
+	for _, key := range []string{"a", "e", "x", "delete", "p"} {
 		_, cmd := send(s, key)
 		if s.Capturing() {
 			t.Fatalf("%s opened a dialog in a read-only session", key)

@@ -14,6 +14,9 @@ import (
 // maxInputRunes bounds the length of any single-line input.
 const maxInputRunes = 512
 
+// maskRune is shown for every rune of a masked input.
+const maskRune = '•'
+
 // textInput is a minimal single-line editor with exact-width rendering.
 // Everything typed or pasted is sanitized before it is stored, so the
 // value is always safe to display.
@@ -21,11 +24,26 @@ type textInput struct {
 	value       []rune
 	cursor      int
 	placeholder string
+	// masked inputs render maskRune for every rune and never the text.
+	masked bool
 }
 
 // newInput creates an input with a placeholder shown while empty.
 func newInput(placeholder string) textInput {
 	return textInput{placeholder: placeholder}
+}
+
+// newMaskedInput creates an input for secrets: it renders one maskRune
+// per rune and never the text itself.
+func newMaskedInput(placeholder string) textInput {
+	return textInput{placeholder: placeholder, masked: true}
+}
+
+// Clear erases the text, overwriting the stored runes first.
+func (in *textInput) Clear() {
+	clear(in.value)
+	in.value = nil
+	in.cursor = 0
 }
 
 // Value returns the current text.
@@ -40,8 +58,12 @@ func (in *textInput) SetValue(s string) {
 	in.cursor = len(in.value)
 }
 
-// Insert adds sanitized text at the cursor.
+// Insert adds sanitized text at the cursor. Masked inputs drop the line
+// break that usually ends a pasted secret.
 func (in *textInput) Insert(s string) {
+	if in.masked {
+		s = strings.TrimRight(s, "\r\n")
+	}
 	add := []rune(sanitize.Line(s))
 	room := maxInputRunes - len(in.value)
 	if room <= 0 || len(add) == 0 {
@@ -133,7 +155,7 @@ func (in textInput) View(t *theme.Theme, width int, focused bool) string {
 		for i := start; i <= len(in.value) && used < width; i++ {
 			cell := " "
 			if i < len(in.value) {
-				cell = string(in.value[i])
+				cell = in.cell(i)
 			}
 			cw := max(ansi.StringWidth(cell), 1)
 			if used+cw > width {
@@ -163,7 +185,7 @@ func (in textInput) scrollStart(width int) int {
 	need := 1
 	start := in.cursor
 	for start > 0 {
-		cw := max(ansi.StringWidth(string(in.value[start-1])), 1)
+		cw := max(ansi.StringWidth(in.cell(start-1)), 1)
 		if need+cw > width {
 			break
 		}
@@ -171,4 +193,12 @@ func (in textInput) scrollStart(width int) int {
 		start--
 	}
 	return start
+}
+
+// cell is what rune i renders as: the rune itself, or maskRune.
+func (in textInput) cell(i int) string {
+	if in.masked {
+		return string(maskRune)
+	}
+	return string(in.value[i])
 }

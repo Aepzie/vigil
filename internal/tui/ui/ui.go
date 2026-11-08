@@ -4,6 +4,7 @@
 package ui
 
 import (
+	"context"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -19,6 +20,11 @@ import (
 // with tea.Exec. It is nil when shells are unavailable.
 type ShellFunc func(srv store.Server) tea.ExecCommand
 
+// InstallKeyFunc logs in to srv once with password and adds the manager
+// public key to the remote user's authorized_keys. The password must not
+// be stored or logged.
+type InstallKeyFunc func(ctx context.Context, srv store.Server, password string) error
+
 // Deps are shared by the app and every screen of one session.
 type Deps struct {
 	Theme   *theme.Theme
@@ -27,6 +33,10 @@ type Deps struct {
 	Alerts  *alerts.Engine
 	Shell   ShellFunc
 	PollNow func(id string)
+	// InstallKey installs the manager key on a server using a one-time
+	// password. It is nil when the feature is unavailable (demo and
+	// read-only sessions).
+	InstallKey InstallKeyFunc
 	// User is the logged-in user name (already sanitized).
 	User string
 	// Version is the build version, e.g. "v0.1.0".
