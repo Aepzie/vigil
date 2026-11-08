@@ -1,0 +1,11 @@
+Filesystem     Type     1024-blocks      Used Available Capacity Mounted on
+udev           devtmpfs     4000000         0   4000000       0% /dev
+tmpfs          tmpfs         800000      1500    798500       1% /run
+/dev/sda1      ext4        50000000  30000000  17500000      64% /
+tmpfs          tmpfs        4000000         0   4000000       0% /dev/shm
+/dev/sda15     vfat          106858      6182    100677       6% /boot/efi
+/dev/sdb1      xfs        100000000  90000000  10000000      90% /mnt/My  Backups
+/dev/sda1      ext4        50000000  30000000  17500000      64% /var/lib/docker/bind
+overlay        overlay     50000000  30000000  17500000      64% /var/lib/docker/overlay2/abc/merged
+server:/export nfs4       200000000 100000000 100000000      50% /mnt/nfs
+/dev/loop0     squashfs       65536     65536         0     100% /snap/core20/2318
