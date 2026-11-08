@@ -26,6 +26,11 @@ var (
 	ErrUnreachable = errors.New("host unreachable")
 	ErrUnknownHost = errors.New("unknown host")
 	ErrClosed      = errors.New("connection closed by server")
+	// ErrKeyNotUsable means the per-server key named by
+	// store.Server.KeyPath cannot be used. The cause (invalid name,
+	// missing file, insecure permissions, symlink leaving the keys
+	// directory, unparsable key, ...) is deliberately not reported.
+	ErrKeyNotUsable = errors.New("key not usable")
 )
 
 // DialError describes why connecting to a server failed. Kind is one of
@@ -48,6 +53,8 @@ func (e *DialError) Error() string {
 		return fmt.Sprintf("ssh %s: authentication failed; add the vigil public key to ~/.ssh/authorized_keys of %q on the server", target, e.User)
 	case errors.Is(e.Kind, ErrHostKeyMismatch):
 		return fmt.Sprintf("ssh %s: %v", target, e.Err)
+	case errors.Is(e.Kind, ErrKeyNotUsable):
+		return fmt.Sprintf("ssh %s: key not usable; it must be an unencrypted private key file in the vigil keys directory, owned by the vigil user with mode 0600", target)
 	case e.Kind != nil:
 		return fmt.Sprintf("ssh %s: %v (%v)", target, e.Kind, e.Err)
 	default:
@@ -70,6 +77,8 @@ func classify(err error) error {
 	switch {
 	case errors.Is(err, ErrHostKeyMismatch):
 		return ErrHostKeyMismatch
+	case errors.Is(err, ErrKeyNotUsable):
+		return ErrKeyNotUsable
 	case errors.Is(err, context.DeadlineExceeded), errors.Is(err, os.ErrDeadlineExceeded):
 		return ErrTimeout
 	case errors.As(err, &dnsErr) && !dnsErr.IsTimeout:
@@ -113,6 +122,8 @@ func Reason(err error) string {
 		return "host key mismatch!"
 	case errors.Is(err, ErrAuthFailed):
 		return "auth failed"
+	case errors.Is(err, ErrKeyNotUsable):
+		return "key not usable"
 	case errors.Is(err, ErrTimeout), errors.Is(err, context.DeadlineExceeded), errors.Is(err, os.ErrDeadlineExceeded):
 		return "timeout"
 	case errors.Is(err, ErrRefused):

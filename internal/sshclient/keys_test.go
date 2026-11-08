@@ -43,7 +43,7 @@ func TestNewDialerGeneratesAndReloadsKey(t *testing.T) {
 	}
 
 	if runtime.GOOS != "windows" {
-		for name, want := range map[string]os.FileMode{"id_ed25519": 0o600, "known_hosts": 0o600, ".": 0o700} {
+		for name, want := range map[string]os.FileMode{"id_ed25519": 0o600, "known_hosts": 0o600, ".": 0o700, "keys": 0o700} {
 			st, err := os.Stat(filepath.Join(dir, name))
 			if err != nil {
 				t.Fatal(err)
@@ -124,31 +124,6 @@ func TestLoadKey(t *testing.T) {
 	}
 }
 
-func TestExpandHome(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
-	tests := []struct {
-		in, want string
-	}{
-		{"~/.ssh/id_ed25519", filepath.Join(home, ".ssh", "id_ed25519")},
-		{"~", home},
-		{"/etc/key", "/etc/key"},
-		{"relative/key", "relative/key"},
-		{"~other/key", "~other/key"},
-		{"", ""},
-	}
-	for _, tt := range tests {
-		got, err := expandHome(tt.in)
-		if err != nil {
-			t.Fatalf("expandHome(%q): %v", tt.in, err)
-		}
-		if got != tt.want {
-			t.Errorf("expandHome(%q) = %q, want %q", tt.in, got, tt.want)
-		}
-	}
-}
-
 func TestKeyCacheReloadsChangedFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "key")
@@ -169,7 +144,7 @@ func TestKeyCacheReloadsChangedFile(t *testing.T) {
 	}
 	var c keyCache
 	first := writeKey()
-	s1, err := c.load(path)
+	s1, err := c.load(dir, "key")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,7 +154,7 @@ func TestKeyCacheReloadsChangedFile(t *testing.T) {
 	if err := os.WriteFile(path, append(mustRead(t, path), '\n'), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	s2, err := c.load(path)
+	s2, err := c.load(dir, "key")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,7 +162,7 @@ func TestKeyCacheReloadsChangedFile(t *testing.T) {
 		t.Fatal("reload of same key returned a different key")
 	}
 	second := writeKey()
-	s3, err := c.load(path)
+	s3, err := c.load(dir, "key")
 	if err != nil {
 		t.Fatal(err)
 	}

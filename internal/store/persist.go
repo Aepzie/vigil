@@ -158,7 +158,7 @@ func loadServers(path string) ([]Server, error) {
 	servers := make([]Server, 0, len(env.Servers))
 	for i, srv := range env.Servers {
 		srv = srv.Normalized()
-		if err := srv.Validate(); err != nil {
+		if err := srv.validateStored(); err != nil {
 			return nil, fmt.Errorf("store: %s: server #%d (%q): %w", path, i+1, srv.Name, err)
 		}
 		key := strings.ToLower(srv.Name)

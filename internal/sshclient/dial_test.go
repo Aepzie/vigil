@@ -231,7 +231,6 @@ func TestDialErrors(t *testing.T) {
 		}
 	}()
 
-	keyDir := t.TempDir()
 	tests := []struct {
 		name    string
 		srv     store.Server
@@ -243,7 +242,7 @@ func TestDialErrors(t *testing.T) {
 		{"handshake timeout", store.Server{Host: "127.0.0.1", Port: silent.Addr().(*net.TCPAddr).Port, User: "u"}, 300 * time.Millisecond, ErrTimeout, "timeout"},
 		{"refused", store.Server{Host: "127.0.0.1", Port: closedPort, User: "u"}, 10 * time.Second, ErrRefused, "connection refused"},
 		{"closed by server", store.Server{Host: "127.0.0.1", Port: eofLn.Addr().(*net.TCPAddr).Port, User: "u"}, 5 * time.Second, ErrClosed, "connection lost"},
-		{"missing key file", store.Server{Host: "127.0.0.1", Port: 22, User: "u", KeyPath: filepath.Join(keyDir, "missing")}, time.Second, nil, ""},
+		{"missing key file", store.Server{Host: "127.0.0.1", Port: 22, User: "u", KeyPath: "missing"}, time.Second, ErrKeyNotUsable, "key not usable"},
 		{"no user", store.Server{Host: "127.0.0.1", Port: 22}, time.Second, nil, "no user configured"},
 	}
 	for _, tt := range tests {
@@ -298,13 +297,17 @@ func TestDialCanceledContext(t *testing.T) {
 }
 
 func TestDialWithPerServerKey(t *testing.T) {
-	d, _ := newTestDialer(t)
+	d, dir := newTestDialer(t)
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
-	keyDir := filepath.Join(home, ".ssh")
-	other, err := NewDialer(keyDir)
+	otherDir := filepath.Join(home, ".ssh")
+	other, err := NewDialer(otherDir)
 	if err != nil {
+		t.Fatal(err)
+	}
+	otherKey := filepath.Join(otherDir, keyFileName)
+	if err := os.WriteFile(filepath.Join(dir, "keys", "target_ed25519"), mustRead(t, otherKey), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	srv := sshtest.Start(t, sshtest.Options{AuthorizedKeys: []ssh.PublicKey{publicKeyOf(t, other)}})
@@ -313,7 +316,17 @@ func TestDialWithPerServerKey(t *testing.T) {
 	if _, err := d.Dial(dialCtx(t, 5*time.Second), target); !errors.Is(err, ErrAuthFailed) {
 		t.Fatalf("manager key should be rejected, got %v", err)
 	}
-	target.KeyPath = "~/.ssh/id_ed25519"
+	for _, path := range []string{"~/.ssh/id_ed25519", otherKey, "../../" + filepath.Base(home) + "/.ssh/id_ed25519"} {
+		target.KeyPath = path
+		_, err := d.Dial(dialCtx(t, 5*time.Second), target)
+		if !errors.Is(err, ErrKeyNotUsable) {
+			t.Fatalf("Dial with key path %q = %v, want ErrKeyNotUsable", path, err)
+		}
+		if strings.Contains(err.Error(), path) || strings.Contains(err.Error(), "id_ed25519") {
+			t.Errorf("error reveals the key path: %v", err)
+		}
+	}
+	target.KeyPath = "target_ed25519"
 	client, err := d.Dial(dialCtx(t, 5*time.Second), target)
 	if err != nil {
 		t.Fatalf("Dial with KeyPath: %v", err)
