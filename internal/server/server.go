@@ -37,6 +37,7 @@ import (
 	"github.com/CraguS/vigil/internal/auth"
 	"github.com/CraguS/vigil/internal/collector"
 	"github.com/CraguS/vigil/internal/compat"
+	"github.com/CraguS/vigil/internal/fsperm"
 	"github.com/CraguS/vigil/internal/sanitize"
 	"github.com/CraguS/vigil/internal/sshclient"
 	"github.com/CraguS/vigil/internal/store"
@@ -202,18 +203,25 @@ func Serve(ctx context.Context, ln net.Listener, cfg Config, d Deps) error {
 }
 
 // secureHostKey makes sure the private host key is only readable by its
-// owner. Windows does not use Unix permission bits, so it is skipped
-// there.
+// owner and that it is owned by the user running vigil. Windows does not
+// use Unix permission bits, so it is skipped there.
 func secureHostKey(path string, logger *log.Logger) error {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return fmt.Errorf("host key: %w", err)
 	}
 	if runtime.GOOS == "windows" || fi.Mode().Perm()&0o077 == 0 {
-		return nil
+		return checkHostKeyOwner(path)
 	}
 	logger.Warn("tightening host key permissions", "path", path, "mode", fi.Mode().Perm())
 	if err := os.Chmod(path, 0o600); err != nil {
+		return fmt.Errorf("host key: %w", err)
+	}
+	return checkHostKeyOwner(path)
+}
+
+func checkHostKeyOwner(path string) error {
+	if err := fsperm.CheckPrivateFile(path); err != nil {
 		return fmt.Errorf("host key: %w", err)
 	}
 	return nil

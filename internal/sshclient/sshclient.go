@@ -6,6 +6,7 @@ package sshclient
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"path/filepath"
 	"strconv"
@@ -13,6 +14,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
+	"github.com/CraguS/vigil/internal/fsperm"
 	"github.com/CraguS/vigil/internal/store"
 )
 
@@ -23,6 +25,7 @@ const DefaultDialTimeout = 10 * time.Second
 // Dialer is safe for concurrent use.
 type Dialer struct {
 	dataDir string
+	keysDir string
 	signer  ssh.Signer
 	comment string
 	hosts   *hostKeyDB
@@ -30,7 +33,9 @@ type Dialer struct {
 }
 
 // NewDialer loads <dataDir>/id_ed25519 (generating it with 0600
-// permissions on first start) and <dataDir>/known_hosts.
+// permissions on first start) and <dataDir>/known_hosts, and creates the
+// directory <dataDir>/keys (0700) holding the per-server keys named by
+// store.Server.KeyPath.
 func NewDialer(dataDir string) (*Dialer, error) {
 	comment := keyComment()
 	signer, err := loadOrCreateKey(dataDir, comment)
@@ -41,7 +46,11 @@ func NewDialer(dataDir string) (*Dialer, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Dialer{dataDir: dataDir, signer: signer, comment: comment, hosts: hosts}, nil
+	keysDir := filepath.Join(dataDir, store.KeysDir)
+	if _, err := fsperm.EnsurePrivateDir(keysDir); err != nil {
+		return nil, fmt.Errorf("keys directory: %w", err)
+	}
+	return &Dialer{dataDir: dataDir, keysDir: keysDir, signer: signer, comment: comment, hosts: hosts}, nil
 }
 
 // PublicKey returns the manager public key as an authorized_keys line
@@ -112,11 +121,19 @@ func (d *Dialer) Dial(ctx context.Context, srv store.Server) (*ssh.Client, error
 	return ssh.NewClient(c, chans, reqs), nil
 }
 
+// signerFor returns the manager key, or the key named by srv.KeyPath from
+// the keys directory. Why a named key cannot be used is not revealed (the
+// error reaches dashboard users, who must not learn whether files exist):
+// every failure is ErrKeyNotUsable.
 func (d *Dialer) signerFor(srv store.Server) (ssh.Signer, error) {
 	if srv.KeyPath == "" {
 		return d.signer, nil
 	}
-	return d.keys.load(srv.KeyPath)
+	signer, err := d.keys.load(d.keysDir, srv.KeyPath)
+	if err != nil {
+		return nil, ErrKeyNotUsable
+	}
+	return signer, nil
 }
 
 // serverAddr returns host:port (IPv6 safe), defaulting to port 22.

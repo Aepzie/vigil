@@ -159,7 +159,7 @@ func TestDuplicateNames(t *testing.T) {
 
 func TestPersistenceRoundTrip(t *testing.T) {
 	st, dir := openTemp(t)
-	srv := mustAdd(t, st, Server{Name: "db-primary", Host: "10.0.0.5", Port: 2222, User: "postgres", KeyPath: "/keys/db", Tags: []string{"prod", "db"}})
+	srv := mustAdd(t, st, Server{Name: "db-primary", Host: "10.0.0.5", Port: 2222, User: "postgres", KeyPath: "db_ed25519", Tags: []string{"prod", "db"}})
 	mustAdd(t, st, Server{Name: "cache", Host: "cache.example.internal", User: "ops"})
 	set := DefaultSettings()
 	set.PollInterval = 5 * time.Second
@@ -205,7 +205,7 @@ func TestPersistenceRoundTrip(t *testing.T) {
 	if !ok {
 		t.Fatal("server lost after reopen")
 	}
-	if got.Name != srv.Name || got.Port != 2222 || got.KeyPath != "/keys/db" || strings.Join(got.Tags, ",") != "prod,db" ||
+	if got.Name != srv.Name || got.Port != 2222 || got.KeyPath != "db_ed25519" || strings.Join(got.Tags, ",") != "prod,db" ||
 		!got.CreatedAt.Equal(srv.CreatedAt) || !got.UpdatedAt.Equal(srv.UpdatedAt) {
 		t.Errorf("round trip mismatch:\n got %+v\nwant %+v", got, srv)
 	}

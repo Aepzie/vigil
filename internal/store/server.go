@@ -19,14 +19,23 @@ const (
 
 	MaxNameLen    = 48
 	MaxHostLen    = 253
-	MaxKeyPathLen = 4096
+	MaxKeyNameLen = 64
 	MaxTags       = 8
 	MaxTagLen     = 24
+
+	// MaxKeyPathLen bounds legacy key paths still accepted when loading
+	// servers.json (see Server.KeyPath).
+	MaxKeyPathLen = 4096
 )
 
+// KeysDir is the directory inside the data directory that holds the
+// per-server private keys named by Server.KeyPath.
+const KeysDir = "keys"
+
 var (
-	userPattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_.-]{0,31}$`)
-	tagPattern  = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
+	userPattern    = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_.-]{0,31}$`)
+	tagPattern     = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
+	keyNamePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
 )
 
 // Server is one managed host.
@@ -36,8 +45,14 @@ type Server struct {
 	Host string `json:"host"`
 	Port int    `json:"port"`
 	User string `json:"user"`
-	// KeyPath optionally points to a private key used for this server.
-	// Empty means the manager's own key (<data>/id_ed25519).
+	// KeyPath optionally names a private key used for this server instead
+	// of the manager's own key (<data>/id_ed25519, used when empty). It is
+	// a plain file name (see ValidateKeyName), not a path: the key is read
+	// from <data>/keys/<KeyPath>, which on Unix must be owned by the user
+	// running vigil with no group or other permissions. Absolute or
+	// relative paths stored by older versions still load, but are never
+	// used for dialing and must be replaced by a key name on the next
+	// edit.
 	KeyPath   string    `json:"key_path,omitempty"`
 	Tags      []string  `json:"tags,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
@@ -75,13 +90,24 @@ func (s Server) Normalized() Server {
 // bracketed IPv6 address is accepted. Name uniqueness is checked by Add and
 // Update.
 func (s Server) Validate() error {
+	return s.validate(validateKeyName)
+}
+
+// validateStored is Validate for servers loaded from servers.json: legacy
+// key paths are accepted so the file keeps loading (the dialer refuses
+// them).
+func (s Server) validateStored() error {
+	return s.validate(validateLegacyKeyPath)
+}
+
+func (s Server) validate(validateKey func(string) error) error {
 	n := s.Normalized()
 	checks := []func() error{
 		func() error { return validateName(n.Name) },
 		func() error { return validateHost(n.Host) },
 		func() error { return validatePort(n.Port) },
 		func() error { return validateUser(n.User) },
-		func() error { return validateKeyPath(n.KeyPath) },
+		func() error { return validateKey(n.KeyPath) },
 		func() error { return validateTags(n.Tags) },
 	}
 	for _, check := range checks {
@@ -143,7 +169,30 @@ func validateUser(user string) error {
 	return nil
 }
 
-func validateKeyPath(path string) error {
+// ValidateKeyName checks a per-server key name: a plain file name inside
+// <data>/keys of 1–MaxKeyNameLen characters from A–Z a–z 0–9 . _ -,
+// starting with a letter or digit. Paths ("/", "\", ".."), "~" and hidden
+// names are rejected. The error is a *FieldError for "key_path".
+func ValidateKeyName(name string) error {
+	switch {
+	case name == "":
+		return fieldErr("key_path", "must not be empty")
+	case len(name) > MaxKeyNameLen:
+		return fieldErr("key_path", fmt.Sprintf("must be at most %d characters: give the file name of a key in the vigil keys directory, not a path", MaxKeyNameLen))
+	case !keyNamePattern.MatchString(name):
+		return fieldErr("key_path", fmt.Sprintf("%q is not a valid key name: give the file name of a key in the vigil keys directory (A–Z, a–z, 0–9, '.', '_' or '-', starting with a letter or digit), not a path", name))
+	}
+	return nil
+}
+
+func validateKeyName(name string) error {
+	if name == "" {
+		return nil
+	}
+	return ValidateKeyName(name)
+}
+
+func validateLegacyKeyPath(path string) error {
 	switch {
 	case path == "":
 		return nil

@@ -15,6 +15,9 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
+
+	"github.com/CraguS/vigil/internal/fsperm"
+	"github.com/CraguS/vigil/internal/store"
 )
 
 const (
@@ -35,26 +38,33 @@ func keyComment() string {
 }
 
 // loadOrCreateKey loads <dir>/id_ed25519 or generates it on first start.
-// It also (re)writes <dir>/id_ed25519.pub when it is missing.
+// It also (re)writes <dir>/id_ed25519.pub when it is missing. On Unix an
+// existing key must be owned by the current user with no group or other
+// permissions, or it is refused.
 func loadOrCreateKey(dir, comment string) (ssh.Signer, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, fmt.Errorf("create data directory: %w", err)
 	}
 	path := filepath.Join(dir, keyFileName)
-	signer, err := loadKey(path)
-	switch {
-	case errors.Is(err, fs.ErrNotExist):
-		signer, err = createKey(path, comment)
-		if err != nil {
-			return nil, err
-		}
-	case err != nil:
+	signer, err := loadManagerKey(path, comment)
+	if err != nil {
 		return nil, err
 	}
 	if err := writePublicKeyIfMissing(path+".pub", signer.PublicKey(), comment); err != nil {
 		return nil, err
 	}
 	return signer, nil
+}
+
+func loadManagerKey(path, comment string) (ssh.Signer, error) {
+	err := fsperm.CheckPrivateFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return createKey(path, comment)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("refusing to use the manager key: %w", err)
+	}
+	return loadKey(path)
 }
 
 // createKey generates a new ed25519 key and stores it in OpenSSH format
@@ -120,6 +130,10 @@ func loadKey(path string) (ssh.Signer, error) {
 	if err != nil {
 		return nil, err
 	}
+	return parseKey(path, raw)
+}
+
+func parseKey(path string, raw []byte) (ssh.Signer, error) {
 	signer, err := ssh.ParsePrivateKey(raw)
 	var missing *ssh.PassphraseMissingError
 	switch {
@@ -137,7 +151,11 @@ func readLimited(path string, limit int64) ([]byte, error) {
 		return nil, err
 	}
 	defer f.Close()
-	raw, err := io.ReadAll(io.LimitReader(f, limit+1))
+	return readAllLimited(f, path, limit)
+}
+
+func readAllLimited(r io.Reader, path string, limit int64) ([]byte, error) {
+	raw, err := io.ReadAll(io.LimitReader(r, limit+1))
 	if err != nil {
 		return nil, fmt.Errorf("read %s: %w", path, err)
 	}
@@ -147,18 +165,26 @@ func readLimited(path string, limit int64) ([]byte, error) {
 	return raw, nil
 }
 
-// expandHome replaces a leading "~/" (or a lone "~") with the current
-// user's home directory.
-func expandHome(path string) (string, error) {
-	rest, ok := strings.CutPrefix(path, "~")
-	if !ok || (rest != "" && rest[0] != '/' && rest[0] != filepath.Separator) {
-		return path, nil
+// resolveKeyFile maps a per-server key name to a file inside dir. The name
+// must pass store.ValidateKeyName, and after resolving symlinks the file
+// must still be inside dir.
+func resolveKeyFile(dir, name string) (string, error) {
+	if err := store.ValidateKeyName(name); err != nil {
+		return "", err
 	}
-	home, err := os.UserHomeDir()
+	realDir, err := filepath.EvalSymlinks(dir)
 	if err != nil {
-		return "", fmt.Errorf("expand %q: %w", path, err)
+		return "", fmt.Errorf("keys directory: %w", err)
 	}
-	return filepath.Join(home, filepath.FromSlash(strings.TrimLeft(rest, `/\`))), nil
+	realPath, err := filepath.EvalSymlinks(filepath.Join(dir, name))
+	if err != nil {
+		return "", fmt.Errorf("private key: %w", err)
+	}
+	rel, err := filepath.Rel(realDir, realPath)
+	if err != nil || rel == "." || !filepath.IsLocal(rel) {
+		return "", fmt.Errorf("private key %s resolves to %s, outside %s", name, realPath, realDir)
+	}
+	return realPath, nil
 }
 
 // keyCache memoizes per-server private keys, reloading a file when its
@@ -174,27 +200,46 @@ type cachedKey struct {
 	signer  ssh.Signer
 }
 
-func (c *keyCache) load(path string) (ssh.Signer, error) {
-	expanded, err := expandHome(path)
+// load returns the signer for the key named name inside dir. The file
+// must be a regular file and, on Unix, owned by the current user with no
+// group or other permissions. Errors are detailed; callers showing them
+// to dashboard users must replace them with ErrKeyNotUsable.
+func (c *keyCache) load(dir, name string) (ssh.Signer, error) {
+	path, err := resolveKeyFile(dir, name)
 	if err != nil {
 		return nil, err
 	}
-	st, err := os.Stat(expanded)
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("private key: %w", err)
 	}
+	defer f.Close()
+	st, err := f.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("private key: %w", err)
+	}
+	if !st.Mode().IsRegular() {
+		return nil, fmt.Errorf("private key %s is not a regular file", path)
+	}
+	if err := fsperm.CheckPrivateInfo(path, st); err != nil {
+		return nil, err
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if k, ok := c.keys[expanded]; ok && k.size == st.Size() && k.modTime.Equal(st.ModTime()) {
+	if k, ok := c.keys[path]; ok && k.size == st.Size() && k.modTime.Equal(st.ModTime()) {
 		return k.signer, nil
 	}
-	signer, err := loadKey(expanded)
+	raw, err := readAllLimited(f, path, maxKeyFileSize)
+	if err != nil {
+		return nil, err
+	}
+	signer, err := parseKey(path, raw)
 	if err != nil {
 		return nil, err
 	}
 	if c.keys == nil {
 		c.keys = make(map[string]cachedKey)
 	}
-	c.keys[expanded] = cachedKey{size: st.Size(), modTime: st.ModTime(), signer: signer}
+	c.keys[path] = cachedKey{size: st.Size(), modTime: st.ModTime(), signer: signer}
 	return signer, nil
 }

@@ -12,6 +12,11 @@
 // display. Lines with key options (from=, command=, restrict, ...) are
 // ignored because vigil cannot enforce them, as are malformed lines and
 // comments.
+//
+// On Unix both files must be owned by the user running vigil; users.json
+// must not be accessible by group or others and authorized_keys must not
+// be writable by them. A file failing these checks is not used (treated as
+// empty) and the problem is reported by New and Err.
 package auth
 
 import (
@@ -32,6 +37,8 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/ssh"
+
+	"github.com/CraguS/vigil/internal/fsperm"
 )
 
 // File names inside the data directory.
@@ -100,11 +107,13 @@ type usersDoc struct {
 }
 
 // fileStamp identifies a version of a file on disk; a zero stamp means
-// the file does not exist.
+// the file does not exist. The mode is part of it so that a chmod causes
+// a re-read and with it a new permission check.
 type fileStamp struct {
 	exists  bool
 	modTime time.Time
 	size    int64
+	mode    fs.FileMode
 }
 
 func stat(path string) (fileStamp, error) {
@@ -115,7 +124,7 @@ func stat(path string) (fileStamp, error) {
 	if err != nil {
 		return fileStamp{}, err
 	}
-	return fileStamp{exists: true, modTime: fi.ModTime(), size: fi.Size()}, nil
+	return fileStamp{exists: true, modTime: fi.ModTime(), size: fi.Size(), mode: fi.Mode()}, nil
 }
 
 // Authenticator is safe for concurrent use. Files are re-read when their
@@ -127,11 +136,13 @@ type Authenticator struct {
 	users      map[string][]byte
 	usersStamp fileStamp
 	usersErr   error
-	keys       [][]byte
-	keysStamp  fileStamp
-	keysErr    error
+	// maxCost is the highest bcrypt cost among users, at least cost.
+	maxCost   int
+	keys      [][]byte
+	keysStamp fileStamp
+	keysErr   error
 
-	dummyOnce sync.Once
+	dummyMu   sync.Mutex
 	dummyHash []byte
 }
 
@@ -158,10 +169,10 @@ func (a *Authenticator) keysPath() string  { return filepath.Join(a.dataDir, Aut
 // read or parsed yields an empty set (fail closed) and records the error.
 func (a *Authenticator) refreshLocked() {
 	if st, err := stat(a.usersPath()); err != nil {
-		a.users, a.usersStamp, a.usersErr = nil, fileStamp{}, err
+		a.setUsersLocked(nil, fileStamp{}, err)
 	} else if st != a.usersStamp || a.usersErr != nil {
 		users, err := readUsers(a.usersPath())
-		a.users, a.usersStamp, a.usersErr = users, st, err
+		a.setUsersLocked(users, st, err)
 	}
 	if st, err := stat(a.keysPath()); err != nil {
 		a.keys, a.keysStamp, a.keysErr = nil, fileStamp{}, err
@@ -172,6 +183,13 @@ func (a *Authenticator) refreshLocked() {
 }
 
 func readUsers(path string) (map[string][]byte, error) {
+	err := fsperm.CheckPrivateFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return map[string][]byte{}, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("refusing to use %s: %w", UsersFile, err)
+	}
 	raw, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
 		return map[string][]byte{}, nil
@@ -200,6 +218,13 @@ func readUsers(path string) (map[string][]byte, error) {
 }
 
 func readKeys(path string) ([][]byte, error) {
+	err := fsperm.CheckNotWritableByOthers(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("refusing to use %s: %w", AuthorizedKeysFile, err)
+	}
 	raw, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
@@ -231,31 +256,65 @@ func ParseAuthorizedKeys(raw []byte) [][]byte {
 	return keys
 }
 
-// dummy returns a valid hash compared against when a user does not exist,
-// so failed logins take the same time either way.
-func (a *Authenticator) dummy() []byte {
-	a.dummyOnce.Do(func() {
-		h, err := bcrypt.GenerateFromPassword([]byte(rand.Text()), cost)
-		if err != nil {
-			panic("auth: bcrypt: " + err.Error())
-		}
-		a.dummyHash = h
-	})
-	return a.dummyHash
+// dummy returns a valid hash of the given cost, compared against when a
+// user does not exist so failed logins take the same time either way. It
+// is regenerated when the wanted cost changes.
+func (a *Authenticator) dummy(wantCost int) []byte {
+	a.dummyMu.Lock()
+	defer a.dummyMu.Unlock()
+	if c, err := bcrypt.Cost(a.dummyHash); err == nil && c == wantCost {
+		return a.dummyHash
+	}
+	h, err := bcrypt.GenerateFromPassword([]byte(rand.Text()), wantCost)
+	if err != nil {
+		panic("auth: bcrypt: " + err.Error())
+	}
+	a.dummyHash = h
+	return h
 }
 
 // CheckPassword reports whether user/password match a stored bcrypt hash.
-// It runs in constant time with respect to whether the user exists.
+// Unknown users are compared against a dummy hash with the highest cost
+// found in users.json, and a successful login upgrades a hash weaker than
+// the current cost, so the response time does not reveal whether a user
+// exists.
 func (a *Authenticator) CheckPassword(user, password string) bool {
 	a.mu.Lock()
 	a.refreshLocked()
 	hash, ok := a.users[user]
+	dummyCost := a.maxCost
 	a.mu.Unlock()
 	if !ok {
-		hash = a.dummy()
+		hash = a.dummy(dummyCost)
 	}
 	match := bcrypt.CompareHashAndPassword(hash, []byte(password)) == nil
-	return ok && match
+	if !ok || !match {
+		return false
+	}
+	a.upgradeHash(user, hash, password)
+	return true
+}
+
+// errHashChanged aborts an upgrade when the hash changed meanwhile.
+var errHashChanged = errors.New("hash changed")
+
+// upgradeHash rehashes password with the current cost when hash is
+// weaker. Failures are ignored: the login itself already succeeded.
+func (a *Authenticator) upgradeHash(user string, hash []byte, password string) {
+	if c, err := bcrypt.Cost(hash); err != nil || c >= cost {
+		return
+	}
+	upgraded, err := bcrypt.GenerateFromPassword([]byte(password), cost)
+	if err != nil {
+		return
+	}
+	_ = a.modifyUsers(func(users map[string][]byte) error {
+		if !bytes.Equal(users[user], hash) {
+			return errHashChanged
+		}
+		users[user] = upgraded
+		return nil
+	})
 }
 
 // CheckKey reports whether key is listed in authorized_keys. Any user name
@@ -334,8 +393,21 @@ func (a *Authenticator) modifyUsers(fn func(map[string][]byte) error) error {
 	if err != nil {
 		return err
 	}
-	a.users, a.usersStamp, a.usersErr = users, st, nil
+	a.setUsersLocked(users, st, nil)
 	return nil
+}
+
+// setUsersLocked installs a freshly read user set and the highest bcrypt
+// cost in it (at least cost), which the dummy hash for unknown users
+// uses.
+func (a *Authenticator) setUsersLocked(users map[string][]byte, st fileStamp, err error) {
+	maxCost := cost
+	for _, hash := range users {
+		if hashCost, costErr := bcrypt.Cost(hash); costErr == nil {
+			maxCost = max(maxCost, hashCost)
+		}
+	}
+	a.users, a.usersStamp, a.usersErr, a.maxCost = users, st, err, maxCost
 }
 
 // Users lists user names, sorted.

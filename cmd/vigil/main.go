@@ -150,23 +150,50 @@ func newFlagSet(name, synopsis string, std stdio) *flag.FlagSet {
 
 // parseFlags parses args allowing flags and positional arguments to be
 // interleaved ("user add bob --password-stdin"), and returns the
-// positional arguments.
+// positional arguments. A "--" argument ends flag parsing: everything
+// after it is positional ("user add -- -bob").
 func parseFlags(fs *flag.FlagSet, args []string) ([]string, error) {
 	var positional []string
 	for {
 		if err := fs.Parse(args); err != nil {
 			return nil, err
 		}
-		args = fs.Args()
-		if len(args) == 0 {
+		rest := fs.Args()
+		if endedByTerminator(fs, args[:len(args)-len(rest)]) {
+			return append(positional, rest...), nil
+		}
+		if len(rest) == 0 {
 			return positional, nil
 		}
-		if args[0] == "--" {
-			return append(positional, args[1:]...), nil
-		}
-		positional = append(positional, args[0])
-		args = args[1:]
+		positional = append(positional, rest[0])
+		args = rest[1:]
 	}
+}
+
+// endedByTerminator reports whether fs.Parse consumed a "--" terminator
+// as the last of the consumed arguments. The flag package swallows it
+// silently, so the consumed arguments are replayed: a "--" that is the
+// value of a preceding flag ("--data --") is not a terminator.
+func endedByTerminator(fs *flag.FlagSet, consumed []string) bool {
+	for i := 0; i < len(consumed); i++ {
+		arg := consumed[i]
+		if arg == "--" {
+			return true
+		}
+		name := strings.TrimPrefix(strings.TrimPrefix(arg, "-"), "-")
+		if strings.Contains(name, "=") {
+			continue
+		}
+		if f := fs.Lookup(name); f != nil && !isBoolFlag(f) {
+			i++
+		}
+	}
+	return false
+}
+
+func isBoolFlag(f *flag.Flag) bool {
+	b, ok := f.Value.(interface{ IsBoolFlag() bool })
+	return ok && b.IsBoolFlag()
 }
 
 // expectArgs checks the number of positional arguments.

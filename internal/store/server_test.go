@@ -2,9 +2,48 @@ package store
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestLegacyKeyPathStillLoads(t *testing.T) {
+	dir := t.TempDir()
+	content := `{"version":1,"servers":[{"id":"a","name":"db","host":"10.0.0.5","port":22,"user":"u","key_path":"/root/.ssh/id_ed25519"}]}`
+	if err := os.WriteFile(filepath.Join(dir, serversFile), []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	st, err := Open(dir)
+	if err != nil {
+		t.Fatalf("Open with a legacy key path: %v", err)
+	}
+	srv, ok := st.Server("a")
+	if !ok || srv.KeyPath != "/root/.ssh/id_ed25519" {
+		t.Fatalf("Server = %+v, %v", srv, ok)
+	}
+	var fe *FieldError
+	if err := st.Update(srv); !errors.As(err, &fe) || fe.Field != "key_path" {
+		t.Fatalf("Update keeping the legacy key path = %v, want a key_path error", err)
+	}
+	srv.KeyPath = "db_ed25519"
+	if err := st.Update(srv); err != nil {
+		t.Fatalf("Update with a key name: %v", err)
+	}
+}
+
+func TestValidateKeyName(t *testing.T) {
+	for _, name := range []string{"id_ed25519", "a", "9.key", strings.Repeat("x", MaxKeyNameLen)} {
+		if err := ValidateKeyName(name); err != nil {
+			t.Errorf("ValidateKeyName(%q) = %v, want nil", name, err)
+		}
+	}
+	for _, name := range []string{"", "..", ".", "-key", "_key", "a/b", `a\b`, "/etc/passwd", "~root", "a b", strings.Repeat("x", MaxKeyNameLen+1)} {
+		if err := ValidateKeyName(name); err == nil {
+			t.Errorf("ValidateKeyName(%q) = nil, want error", name)
+		}
+	}
+}
 
 func validServer() Server {
 	return Server{Name: "web-01", Host: "10.0.0.1", Port: 22, User: "deploy"}
@@ -28,7 +67,10 @@ func TestServerValidate(t *testing.T) {
 		{name: "48 char name", mutate: func(s *Server) { s.Name = strings.Repeat("a", 48) }},
 		{name: "uppercase user", mutate: func(s *Server) { s.User = "Admin" }},
 		{name: "underscore user", mutate: func(s *Server) { s.User = "_svc.backup-1" }},
-		{name: "key path", mutate: func(s *Server) { s.KeyPath = `C:\keys\id_ed25519` }},
+		{name: "key name", mutate: func(s *Server) { s.KeyPath = "id_ed25519" }},
+		{name: "key name with dots and dashes", mutate: func(s *Server) { s.KeyPath = "db-01.prod_rsa.key" }},
+		{name: "key name 64 chars", mutate: func(s *Server) { s.KeyPath = strings.Repeat("k", 64) }},
+		{name: "key name trimmed", mutate: func(s *Server) { s.KeyPath = "  web  " }},
 		{name: "tags", mutate: func(s *Server) { s.Tags = []string{"prod", "db", "eu-west.1", "a_b"} }},
 		{name: "duplicate tags collapse", mutate: func(s *Server) { s.Tags = []string{"a", "A", "b", "c", "d", "e", "f", "g", "h", "h"} }},
 
@@ -52,8 +94,21 @@ func TestServerValidate(t *testing.T) {
 		{name: "user digit first", mutate: func(s *Server) { s.User = "1abc" }, field: "user", wantMsg: "not a valid user name"},
 		{name: "user with space", mutate: func(s *Server) { s.User = "a b" }, field: "user", wantMsg: "not a valid user name"},
 		{name: "user too long", mutate: func(s *Server) { s.User = strings.Repeat("a", 33) }, field: "user", wantMsg: "not a valid user name"},
-		{name: "key path control", mutate: func(s *Server) { s.KeyPath = "/a\nb" }, field: "key_path", wantMsg: "control"},
-		{name: "key path too long", mutate: func(s *Server) { s.KeyPath = strings.Repeat("a", 4097) }, field: "key_path", wantMsg: "at most 4096"},
+		{name: "key absolute path", mutate: func(s *Server) { s.KeyPath = "/root/.ssh/id_ed25519" }, field: "key_path", wantMsg: "not a valid key name"},
+		{name: "key windows path", mutate: func(s *Server) { s.KeyPath = `C:\keys\id_ed25519` }, field: "key_path", wantMsg: "not a valid key name"},
+		{name: "key home path", mutate: func(s *Server) { s.KeyPath = "~/.ssh/id_ed25519" }, field: "key_path", wantMsg: "not a valid key name"},
+		{name: "key tilde", mutate: func(s *Server) { s.KeyPath = "~" }, field: "key_path", wantMsg: "not a valid key name"},
+		{name: "key parent", mutate: func(s *Server) { s.KeyPath = ".." }, field: "key_path", wantMsg: "not a valid key name"},
+		{name: "key dot", mutate: func(s *Server) { s.KeyPath = "." }, field: "key_path", wantMsg: "not a valid key name"},
+		{name: "key traversal", mutate: func(s *Server) { s.KeyPath = "../id_ed25519" }, field: "key_path", wantMsg: "not a valid key name"},
+		{name: "key subdir", mutate: func(s *Server) { s.KeyPath = "sub/key" }, field: "key_path", wantMsg: "not a valid key name"},
+		{name: "key backslash", mutate: func(s *Server) { s.KeyPath = `..\key` }, field: "key_path", wantMsg: "not a valid key name"},
+		{name: "key hidden", mutate: func(s *Server) { s.KeyPath = ".key" }, field: "key_path", wantMsg: "not a valid key name"},
+		{name: "key space", mutate: func(s *Server) { s.KeyPath = "my key" }, field: "key_path", wantMsg: "not a valid key name"},
+		{name: "key unicode", mutate: func(s *Server) { s.KeyPath = "ключ" }, field: "key_path", wantMsg: "not a valid key name"},
+		{name: "key control", mutate: func(s *Server) { s.KeyPath = "a\nb" }, field: "key_path", wantMsg: "not a valid key name"},
+		{name: "key nul", mutate: func(s *Server) { s.KeyPath = "a\x00b" }, field: "key_path", wantMsg: "not a valid key name"},
+		{name: "key too long", mutate: func(s *Server) { s.KeyPath = strings.Repeat("a", 65) }, field: "key_path", wantMsg: "at most 64"},
 		{name: "too many tags", mutate: func(s *Server) { s.Tags = strings.Split("a b c d e f g h i", " ") }, field: "tags", wantMsg: "at most 8"},
 		{name: "bad tag chars", mutate: func(s *Server) { s.Tags = []string{"foo bar"} }, field: "tags", wantMsg: `"foo bar"`},
 		{name: "long tag", mutate: func(s *Server) { s.Tags = []string{strings.Repeat("t", 25)} }, field: "tags", wantMsg: "1–24"},
