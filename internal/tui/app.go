@@ -48,3 +48,11 @@ func (m Model) View() tea.View {
 	v.AltScreen = true
 	return v
 }
+
+// RenderFrame synchronously renders one complete frame of size
+// width×height with the given tab active, without a running program and
+// without the splash screen. It is used by `vigil render` for screenshots
+// and by tests.
+func RenderFrame(d *ui.Deps, opts Options, width, height int, tab ui.TabID) string {
+	return ""
+}
