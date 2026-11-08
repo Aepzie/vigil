@@ -250,7 +250,7 @@ func newServerForm(title string, srv store.Server) *serverForm {
 				fieldHost: field("Host/IP", "e.g. 10.0.0.12 or web.example.com", "hostname, IPv4 or IPv6 address", srv.Host),
 				fieldPort: field("Port", "22", "SSH port, default 22", port),
 				fieldUser: field("User", "e.g. ubuntu", "remote login user", srv.User),
-				fieldKey:  field("SSH key path", "manager key", "optional private key on the manager", srv.KeyPath),
+				fieldKey:  field("SSH key", "manager key (or file name in <data>/keys)", "optional private key file name in <data>/keys", srv.KeyPath),
 				fieldTags: field("Tags", "prod, web", "comma separated", strings.Join(srv.Tags, ", ")),
 			},
 		},
@@ -683,7 +683,7 @@ func (s *servers) access(w, h int) string {
 		keyLine = fg(t.P.Accent2, widgets.FitLine(key, iw))
 	}
 	intro := paint(t.P.Muted, wrapWords("vigil reads metrics over SSH, no agent needed. Add the manager public key to ~/.ssh/authorized_keys of each target user:", iw))
-	outro := paint(t.P.Faint, wrapWords("A per-server SSH key path overrides the manager key. The full key is shown in the Settings tab.", iw))
+	outro := paint(t.P.Faint, wrapWords("A per-server SSH key (a file name in <data>/keys) overrides the manager key. The full key is shown in the Settings tab.", iw))
 	lines := append(append(intro, keyLine, ""), outro...)
 	if ih < len(lines) {
 		short := paint(t.P.Muted, wrapWords("Add the manager key to ~/.ssh/authorized_keys of each target user:", iw))

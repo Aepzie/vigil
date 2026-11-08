@@ -3,6 +3,7 @@ package screens
 import (
 	"errors"
 	"slices"
+	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -152,6 +153,28 @@ func TestServersSaveErrorShownInForm(t *testing.T) {
 	if s.form.err != "disk full" {
 		t.Fatalf("general error %q", s.form.err)
 	}
+}
+
+func TestServersKeyField(t *testing.T) {
+	s := newTestServers(t)
+	send(s, "a")
+	key := s.form.fields[fieldKey]
+	if key.label != "SSH key" {
+		t.Fatalf("label %q", key.label)
+	}
+	if want := "manager key (or file name in <data>/keys)"; key.input.placeholder != want {
+		t.Fatalf("placeholder %q, want %q", key.input.placeholder, want)
+	}
+	if !strings.Contains(key.help, "<data>/keys") {
+		t.Fatalf("help %q does not mention <data>/keys", key.help)
+	}
+	send(s, "up")
+	send(s, "up")
+	typeText(s, "deploy_ed25519")
+	if got := s.form.Value(fieldKey); got != "deploy_ed25519" {
+		t.Fatalf("key field value %q", got)
+	}
+	checkSize(t, s.View(100, 30), 100, 30)
 }
 
 // fillServerForm types a valid server into the open add form.
