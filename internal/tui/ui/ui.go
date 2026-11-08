@@ -8,11 +8,11 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/CraguS/vigil/internal/alerts"
-	"github.com/CraguS/vigil/internal/collector"
-	"github.com/CraguS/vigil/internal/metrics"
-	"github.com/CraguS/vigil/internal/store"
-	"github.com/CraguS/vigil/internal/theme"
+	"github.com/Aepzie/vigil/internal/alerts"
+	"github.com/Aepzie/vigil/internal/collector"
+	"github.com/Aepzie/vigil/internal/metrics"
+	"github.com/Aepzie/vigil/internal/store"
+	"github.com/Aepzie/vigil/internal/theme"
 )
 
 // ShellFunc builds an interactive shell command for a server, to be run
@@ -42,6 +42,14 @@ type Deps struct {
 	Listen string
 	// Term is the client TERM value.
 	Term string
+	// ReadOnly hides and refuses every mutation of shared state (adding,
+	// editing and deleting servers, editing and saving settings). It is
+	// set for public demo sessions, whose anonymous viewers share one
+	// store.
+	ReadOnly bool
+	// MaxServers caps the inventory: adding a server is refused once this
+	// many exist. 0 means no limit.
+	MaxServers int
 }
 
 // TabID identifies a top-level tab.
@@ -76,7 +84,8 @@ type Screen interface {
 	// Title is the tab label, e.g. "Overview".
 	Title() string
 	// Icon is a single glyph from common terminal fonts (no emoji),
-	// e.g. "◉", "≡", "⚡".
+	// e.g. "◉", "≡", "▲". Avoid emoji-presentation glyphs such as "⚡":
+	// they are double width in most terminals.
 	Icon() string
 	Init() tea.Cmd
 	// Update receives FleetMsg broadcasts, key presses while the screen

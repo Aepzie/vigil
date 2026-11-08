@@ -1,0 +1,71 @@
+# systemd unit for the vigil manager.
+#
+# Install:
+#   sudo useradd --system --home-dir /var/lib/vigil --shell /usr/sbin/nologin vigil
+#   sudo install -m 0755 vigil /usr/local/bin/vigil
+#   sudo install -m 0644 contrib/systemd/vigil.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now vigil
+#   sudo journalctl -u vigil    # first start prints the admin password once
+#
+# Manage users as the service user so file ownership stays correct:
+#   sudo -u vigil VIGIL_DATA=/var/lib/vigil vigil user add alice
+#
+# The manager key to install on monitored servers:
+#   sudo -u vigil VIGIL_DATA=/var/lib/vigil vigil pubkey
+
+[Unit]
+Description=vigil SSH monitoring dashboard
+Documentation=https://github.com/Aepzie/vigil
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=vigil
+Group=vigil
+Environment=VIGIL_DATA=/var/lib/vigil
+ExecStart=/usr/local/bin/vigil serve --listen :2222 --data /var/lib/vigil
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=15s
+
+# State lives in /var/lib/vigil (host key, manager key, users, servers).
+StateDirectory=vigil
+StateDirectoryMode=0700
+UMask=0077
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ReadWritePaths=/var/lib/vigil
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RemoveIPC=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged
+SystemCallErrorNumber=EPERM
+
+# To listen on port 22 instead, uncomment:
+#AmbientCapabilities=CAP_NET_BIND_SERVICE
+#CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target

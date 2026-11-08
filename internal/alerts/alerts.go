@@ -4,10 +4,9 @@
 package alerts
 
 import (
-	"sync"
 	"time"
 
-	"github.com/CraguS/vigil/internal/metrics"
+	"github.com/Aepzie/vigil/internal/store"
 )
 
 // Kind is what an alert is about.
@@ -51,7 +50,8 @@ func (s Severity) String() string {
 }
 
 // Alert is one condition on one server. Its ID is stable for the
-// (server, kind, subject) triple while the condition lasts.
+// (server, kind, subject) triple while the condition lasts; a new
+// occurrence after resolution gets a new ID.
 type Alert struct {
 	ID         string
 	ServerID   string
@@ -78,6 +78,18 @@ const (
 	EventResolved
 )
 
+// String returns "fired", "escalated" or "resolved".
+func (t EventType) String() string {
+	switch t {
+	case EventEscalated:
+		return "escalated"
+	case EventResolved:
+		return "resolved"
+	default:
+		return "fired"
+	}
+}
+
 // Event is appended to the log whenever an alert changes state.
 type Event struct {
 	Seq   uint64
@@ -86,7 +98,8 @@ type Event struct {
 	At    time.Time
 }
 
-// Thresholds are utilization percentages and the offline grace period.
+// Thresholds are utilization percentages and the offline grace period. A
+// percentage of 0 or less disables that level.
 type Thresholds struct {
 	CPUWarn, CPUCrit   float64
 	MemWarn, MemCrit   float64
@@ -94,48 +107,16 @@ type Thresholds struct {
 	OfflineGrace       time.Duration
 }
 
-// Engine is safe for concurrent use.
-type Engine struct {
-	mu         sync.RWMutex
-	thresholds Thresholds
-	seq        uint64
-}
-
-// NewEngine creates an engine with the given thresholds.
-func NewEngine(th Thresholds) *Engine {
-	return &Engine{thresholds: th}
-}
-
-// SetThresholds replaces the thresholds; they apply on the next Evaluate.
-func (e *Engine) SetThresholds(th Thresholds) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	e.thresholds = th
-}
-
-// Evaluate checks one snapshot and updates alert state. serverName is
-// used for messages.
-func (e *Engine) Evaluate(serverName string, snap metrics.Snapshot) {}
-
-// Forget drops all alerts of a removed server (resolving them).
-func (e *Engine) Forget(serverID string) {}
-
-// Active returns unresolved alerts, most severe and newest first.
-func (e *Engine) Active() []Alert { return nil }
-
-// Recent returns up to n alerts including resolved ones, newest first.
-func (e *Engine) Recent(n int) []Alert { return nil }
-
-// Ack marks an alert as acknowledged.
-func (e *Engine) Ack(id string) {}
-
-// EventsSince returns events with Seq > seq and the latest sequence
-// number. Callers start with seq = LatestSeq() to skip history.
-func (e *Engine) EventsSince(seq uint64) ([]Event, uint64) { return nil, seq }
-
-// LatestSeq returns the current sequence number.
-func (e *Engine) LatestSeq() uint64 {
-	e.mu.RLock()
-	defer e.mu.RUnlock()
-	return e.seq
+// ThresholdsFromSettings extracts the alert thresholds from the manager
+// settings.
+func ThresholdsFromSettings(set store.Settings) Thresholds {
+	return Thresholds{
+		CPUWarn:      set.CPUWarn,
+		CPUCrit:      set.CPUCrit,
+		MemWarn:      set.MemWarn,
+		MemCrit:      set.MemCrit,
+		DiskWarn:     set.DiskWarn,
+		DiskCrit:     set.DiskCrit,
+		OfflineGrace: set.OfflineGrace,
+	}
 }
