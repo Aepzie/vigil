@@ -14,8 +14,10 @@
 //     sections separated by marker lines "@@vigil:<nonce>:<name>":
 //     /proc/stat, /proc/meminfo, /proc/loadavg, /proc/uptime,
 //     /proc/net/dev, df -kPT, uname -sr, os-release, hostname, the page
-//     size and clock tick rate, process owners, /etc/passwd names and
-//     every /proc/<pid>/stat.
+//     size and clock tick rate, /etc/passwd names and, via awk, one
+//     line per process with its pid, owner and the /proc/<pid>/stat
+//     fields vigil uses (newlines in process names are replaced, so a
+//     process cannot hide or forge records).
 //
 // Sending the script on stdin makes it independent of the user's login
 // shell; the random per-poll nonce keeps remote content such as process

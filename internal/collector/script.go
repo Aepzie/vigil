@@ -33,15 +33,37 @@ const (
 	secHostname = "hostname"
 	secPageSize = "pagesize"
 	secClkTck   = "clktck"
-	secOwners   = "owners"
 	secPasswd   = "passwd"
-	secPidStat  = "pidstat"
+	secProcs    = "procs"
 	secEnd      = "end"
 )
 
+// procsAWK turns `ls -ln <R>` into one line per process (see parseProcs).
+// The pid comes from the directory name and the owner from ls; stat is
+// read with getline, which skips processes that exited in the meantime,
+// and its lines are joined so a newline in comm cannot start a record.
+// comm lies between the first '(' and the last ')' because the fields
+// after it are numeric. Only the fields vigil needs are printed, as the
+// original strings so 64-bit counters keep their precision.
+const procsAWK = `$1 ~ /^d/ && $NF ~ /^[0-9]+$/ {
+	f = R "/" $NF "/stat"; r = ""; n = 0
+	while ((getline l < f) > 0) r = (n++ ? r " " : "") l
+	close(f)
+	o = index(r, "(")
+	if (o < 3 || !match(r, /\)[^)]*$/) || split(substr(r, RSTART + 1), t, " ") < 22) next
+	print $NF, $3, substr(r, 1, o - 2), t[12], t[13], t[20], t[22], substr(r, o + 1, RSTART - o - 1)
+}`
+
+// procsCommand lists the processes under root (normally /proc) with
+// procsAWK. Reading the pid list from ls instead of a /proc/[0-9]* glob
+// keeps the command line short however many processes there are.
+func procsCommand(root string) string {
+	return "ls -ln " + root + " 2>/dev/null | awk -v R=" + root + " '" + procsAWK + "'"
+}
+
 // scriptBody is the POSIX sh poll script. df runs under timeout(1) when
 // available because a stale network mount can hang it indefinitely.
-const scriptBody = `s() { printf '\n` + markerPrefix + `%s:%s\n' "$N" "$1"; }
+var scriptBody = `s() { printf '\n` + markerPrefix + `%s:%s\n' "$N" "$1"; }
 s ` + secStat + `; cat /proc/stat 2>/dev/null
 s ` + secMeminfo + `; cat /proc/meminfo 2>/dev/null
 s ` + secLoadavg + `; cat /proc/loadavg 2>/dev/null
@@ -55,9 +77,8 @@ s ` + secOS + `; cat /etc/os-release 2>/dev/null || cat /usr/lib/os-release 2>/d
 s ` + secHostname + `; hostname 2>/dev/null || cat /proc/sys/kernel/hostname 2>/dev/null
 s ` + secPageSize + `; getconf PAGESIZE 2>/dev/null || echo 4096
 s ` + secClkTck + `; getconf CLK_TCK 2>/dev/null || echo 100
-s ` + secOwners + `; stat -c '%u %n' /proc/[0-9]* 2>/dev/null
 s ` + secPasswd + `; cut -d: -f1,3 /etc/passwd 2>/dev/null
-s ` + secPidStat + `; cat /proc/[0-9]*/stat 2>/dev/null
+s ` + secProcs + `; ` + procsCommand("/proc") + `
 s ` + secEnd + `
 exit 0
 `
@@ -116,7 +137,6 @@ type sample struct {
 	ifaces   map[string]ifaceCounters
 	disks    []metrics.Disk
 	procs    []pidStat
-	owners   map[int]int
 	users    map[int]string
 	pageSize uint64
 	clkTck   uint64
@@ -152,8 +172,7 @@ func parseSample(out, nonce string, at time.Time) (*sample, error) {
 		mem:      mem,
 		ifaces:   parseNetDev(sec[secNetDev]),
 		disks:    parseDF(sec[secDF]),
-		procs:    parsePidStats(sec[secPidStat]),
-		owners:   parseOwners(sec[secOwners]),
+		procs:    parseProcs(sec[secProcs]),
 		users:    parsePasswd(sec[secPasswd]),
 		pageSize: parsePositiveInt(sec[secPageSize], 4096),
 		clkTck:   parsePositiveInt(sec[secClkTck], 100),
