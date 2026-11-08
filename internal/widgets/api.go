@@ -1,49 +1,8 @@
 package widgets
 
 import (
-	"strings"
-
 	"github.com/CraguS/vigil/internal/theme"
 )
-
-// Sparkline renders the last width values as a one-line ▁..█ sparkline in
-// color c. max ≤ 0 means auto-scale to the largest value. Output is exactly
-// width cells.
-func Sparkline(values []float64, width int, max float64, c theme.RGB) string {
-	return strings.Repeat(" ", max0(width))
-}
-
-// Progress renders a one-line bar of width cells: frac (0..1) filled with
-// fill color on a dark track.
-func Progress(t *theme.Theme, width int, frac float64, fill theme.RGB) string {
-	return strings.Repeat(" ", max0(width))
-}
-
-// Segment is one part of a StackedBar.
-type Segment struct {
-	Value float64
-	Color theme.RGB
-}
-
-// StackedBar renders a one-line bar of width cells where segments occupy
-// proportional widths of total (total ≤ 0 means sum of segments); the
-// remainder is drawn as dark track.
-func StackedBar(t *theme.Theme, width int, total float64, segs []Segment) string {
-	return strings.Repeat(" ", max0(width))
-}
-
-// BigNumber renders text as 3-line tall 7-segment digits drawn with heavy
-// box characters (┏━┓ ┃ ┃ ┗━┛). Supported runes: 0-9 . , - % k K M G T B
-// / s and space; others render blank. Output lines all have width
-// BigNumberWidth(text).
-func BigNumber(text string, c theme.RGB) string {
-	return Blank(BigNumberWidth(text), 3)
-}
-
-// BigNumberWidth is the cell width BigNumber will produce for text.
-func BigNumberWidth(text string) int {
-	return len([]rune(text)) * 3
-}
 
 // Align controls horizontal alignment of table cells.
 type Align int
