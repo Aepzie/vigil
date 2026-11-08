@@ -13,16 +13,22 @@
 //     feeds it a small POSIX sh script on stdin. The script prints
 //     sections separated by marker lines "@@vigil:<nonce>:<name>":
 //     /proc/stat, /proc/meminfo, /proc/loadavg, /proc/uptime,
-//     /proc/net/dev, df -kPT, uname -sr, os-release, hostname, the page
-//     size and clock tick rate, process owners, /etc/passwd names and
-//     every /proc/<pid>/stat.
+//     /proc/net/dev, df -kPTl (local filesystems only), uname -sr,
+//     os-release, hostname, the page size and clock tick rate,
+//     /etc/passwd names and, via awk, one line per process with its
+//     pid, owner and the /proc/<pid>/stat fields vigil uses (newlines
+//     in process names are replaced, so a process cannot hide or forge
+//     records).
 //
 // Sending the script on stdin makes it independent of the user's login
 // shell; the random per-poll nonce keeps remote content such as process
 // names from forging sections, and a trailing "end" section detects
-// truncated output. Output is capped at 4 MiB and every poll is bounded
-// by a timeout of twice the interval (5s to 15s); on timeout the client
-// is closed, which unblocks any pending I/O.
+// truncated output. Output is read as a stream: at most 32768 process
+// records are kept (the rest is discarded and the list marked partial,
+// so busy hosts still report everything else), all other output is
+// capped at 4 MiB, and every poll is bounded by a timeout of twice the
+// interval (5s to 15s); on timeout the client is closed, which unblocks
+// any pending I/O.
 //
 // # Rates
 //

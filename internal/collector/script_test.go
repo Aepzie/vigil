@@ -4,18 +4,96 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
 )
 
+// fakeStat formats a /proc/<pid>/stat line as the kernel does.
+func fakeStat(pid int, comm string, utime, stime, start, rss uint64) string {
+	return fmt.Sprintf("%d (%s) S 1 1 1 0 -1 4194560 1200 0 3 0 %d %d 0 0 20 0 1 0 %d 172032000 %d "+
+		"18446744073709551615 1 1 0 0 0 0 0 4096 1260 0 0 0 17 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n",
+		pid, comm, utime, stime, start, rss)
+}
+
+// TestProcsCommandAdversarial runs procsCommand with the local sh, ls
+// and awk against a fake /proc whose process names try to hide a process
+// or forge records for other pids.
+func TestProcsCommandAdversarial(t *testing.T) {
+	sh, err := exec.LookPath("sh")
+	if err != nil {
+		t.Skip("no sh in PATH")
+	}
+	root := t.TempDir()
+	stats := map[string]string{
+		"1":    fakeStat(1, "systemd", 266, 134, 2, 3000),
+		"666":  fakeStat(666, "\n1 (sshd", 5, 5, 9000, 10),
+		"667":  fakeStat(667, "x\ny", 1, 1, 9001, 11),
+		"668":  fakeStat(668, "a) b (c", 2, 2, 9002, 12),
+		"669":  fakeStat(669, "  sp ace", 3, 3, 9003, 13),
+		"670":  fakeStat(670, "big", 18446744073709551000, 615, 9004, 14),
+		"671":  "671 (cut) S 1 2\n",
+		"5000": fakeStat(1, "fake", 999, 999, 2, 999),
+	}
+	for pid, content := range stats {
+		dir := filepath.Join(root, pid)
+		if err := os.Mkdir(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "stat"), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, dir := range []string{"672", "self"} {
+		if err := os.Mkdir(filepath.Join(root, dir), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(root, "123"), []byte(fakeStat(123, "file", 1, 1, 1, 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.CommandContext(t.Context(), sh, "-c", procsCommand(filepath.ToSlash(root)))
+	cmd.Env = append(os.Environ(), "LC_ALL=C", "LANG=C")
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("procs command: %v", err)
+	}
+	got := make(map[int]pidStat)
+	for _, p := range parseProcs(string(out)) {
+		p.uid = 0
+		got[p.pid] = p
+	}
+	want := map[int]pidStat{
+		1:   {pid: 1, comm: "systemd", ticks: 400, start: 2, rss: 3000},
+		666: {pid: 666, comm: "1 (sshd", ticks: 10, start: 9000, rss: 10},
+		667: {pid: 667, comm: "x y", ticks: 2, start: 9001, rss: 11},
+		668: {pid: 668, comm: "a) b (c", ticks: 4, start: 9002, rss: 12},
+		669: {pid: 669, comm: "sp ace", ticks: 6, start: 9003, rss: 13},
+		670: {pid: 670, comm: "big", ticks: ^uint64(0), start: 9004, rss: 14},
+	}
+	if len(got) != len(want) {
+		t.Errorf("got %d processes, want %d:\n%s", len(got), len(want), out)
+	}
+	for pid, w := range want {
+		if got[pid] != w {
+			t.Errorf("pid %d = %+v, want %+v", pid, got[pid], w)
+		}
+	}
+	if n := strings.Count(string(out), "\n"); n != len(want)+1 {
+		t.Errorf("printed %d records, want %d (one per readable process):\n%s", n, len(want)+1, out)
+	}
+}
+
 // sectionOrder is the order in which pollScript prints sections.
 var sectionOrder = []string{
 	secStat, secMeminfo, secLoadavg, secUptime, secNetDev, secDF, secUname,
-	secOS, secHostname, secPageSize, secClkTck, secOwners, secPasswd, secPidStat,
+	secOS, secHostname, secPageSize, secClkTck, secPasswd, secProcs,
 }
 
 // fixtureOutput assembles what pollScript would print on the host
@@ -117,8 +195,81 @@ func TestParseSampleFixture(t *testing.T) {
 	if len(s.cores) != 4 || len(s.procs) != 14 || len(s.disks) != 4 || len(s.ifaces) != 2 {
 		t.Errorf("cores=%d procs=%d disks=%d ifaces=%d", len(s.cores), len(s.procs), len(s.disks), len(s.ifaces))
 	}
-	if s.owners[1234] != 1000 || s.users[1000] != "alice" {
+	if s.procs[1].pid != 1234 || s.procs[1].uid != 1000 || s.users[1000] != "alice" {
 		t.Errorf("owners/users not parsed")
+	}
+}
+
+// fakeDF emulates df variants as sh functions, which take precedence
+// over commands in PATH. Every df and timeout call is logged to fd 3.
+const fakeDF = `exec 3>&2
+dfT() { printf 'Filesystem Type 1024-blocks Used Available Capacity Mounted on\n/dev/sda1 ext4 100 60 40 60%% /\n'; }
+dfP() { printf 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/root 100 30 70 30%% /\n'; }
+df() {
+	echo "df $*" >&3
+	case "$MODE:$1" in
+	gnu:*) dfT ;;
+	busybox:-kPTl) echo 'df: invalid option -- l' >&2; return 1 ;;
+	busybox:-kPT) dfT ;;
+	oldbusybox:-kP) dfP ;;
+	oldbusybox:*) echo usage >&2; return 1 ;;
+	partial:*) dfT; return 1 ;;
+	hung:*) return 137 ;;
+	esac
+}
+timeout() {
+	echo "timeout $*" >&3
+	case "$TIMEOUT:$3" in
+	none:*) return 127 ;;
+	old:-t) shift 4 ;;
+	old:*) return 127 ;;
+	*) shift 3 ;;
+	esac
+	"$@"
+}
+`
+
+func TestDFScriptVariants(t *testing.T) {
+	sh, err := exec.LookPath("sh")
+	if err != nil {
+		t.Skip("no sh in PATH")
+	}
+	tests := []struct {
+		mode, timeout string
+		calls         []string
+		mount         string
+	}{
+		{"gnu", "gnu", []string{"timeout -s KILL 3 true", "timeout -s KILL 3 df -kPTl", "df -kPTl"}, "/dev/sda1"},
+		{"busybox", "gnu", []string{"timeout -s KILL 3 true", "timeout -s KILL 3 df -kPTl", "df -kPTl", "timeout -s KILL 3 df -kPT", "df -kPT"}, "/dev/sda1"},
+		{"oldbusybox", "old", []string{
+			"timeout -s KILL 3 true", "timeout -s KILL -t 3 true",
+			"timeout -s KILL -t 3 df -kPTl", "df -kPTl", "timeout -s KILL -t 3 df -kPT", "df -kPT", "timeout -s KILL -t 3 df -kP", "df -kP",
+		}, "/dev/root"},
+		{"oldbusybox", "none", []string{"timeout -s KILL 3 true", "timeout -s KILL -t 3 true", "df -kPTl", "df -kPT", "df -kP"}, "/dev/root"},
+		{"partial", "gnu", []string{"timeout -s KILL 3 true", "timeout -s KILL 3 df -kPTl", "df -kPTl"}, "/dev/sda1"},
+		{"hung", "gnu", []string{"timeout -s KILL 3 true", "timeout -s KILL 3 df -kPTl", "df -kPTl"}, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.mode+"/"+tt.timeout, func(t *testing.T) {
+			cmd := exec.CommandContext(t.Context(), sh, "-c", fakeDF+dfScript)
+			cmd.Env = append(os.Environ(), "MODE="+tt.mode, "TIMEOUT="+tt.timeout)
+			var stdout, log bytes.Buffer
+			cmd.Stdout, cmd.Stderr = &stdout, &log
+			if err := cmd.Run(); err != nil {
+				t.Fatalf("run: %v\n%s", err, log.String())
+			}
+			calls := strings.Split(strings.TrimSpace(log.String()), "\n")
+			if strings.Join(calls, "|") != strings.Join(tt.calls, "|") {
+				t.Errorf("calls = %q, want %q", calls, tt.calls)
+			}
+			disks := parseDF(stdout.String())
+			switch {
+			case tt.mount == "" && len(disks) != 0:
+				t.Errorf("disks = %+v, want none", disks)
+			case tt.mount != "" && (len(disks) != 1 || disks[0].Device != tt.mount):
+				t.Errorf("disks = %+v, want only %s", disks, tt.mount)
+			}
+		})
 	}
 }
 

@@ -33,31 +33,72 @@ const (
 	secHostname = "hostname"
 	secPageSize = "pagesize"
 	secClkTck   = "clktck"
-	secOwners   = "owners"
 	secPasswd   = "passwd"
-	secPidStat  = "pidstat"
+	secProcs    = "procs"
 	secEnd      = "end"
 )
 
-// scriptBody is the POSIX sh poll script. df runs under timeout(1) when
-// available because a stale network mount can hang it indefinitely.
-const scriptBody = `s() { printf '\n` + markerPrefix + `%s:%s\n' "$N" "$1"; }
+// procsAWK turns `ls -ln <R>` into one line per process (see parseProcs).
+// The pid comes from the directory name and the owner from ls; stat is
+// read with getline, which skips processes that exited in the meantime,
+// and its lines are joined so a newline in comm cannot start a record.
+// comm lies between the first '(' and the last ')' because the fields
+// after it are numeric. Only the fields vigil needs are printed, as the
+// original strings so 64-bit counters keep their precision.
+const procsAWK = `$1 ~ /^d/ && $NF ~ /^[0-9]+$/ {
+	f = R "/" $NF "/stat"; r = ""; n = 0
+	while ((getline l < f) > 0) r = (n++ ? r " " : "") l
+	close(f)
+	o = index(r, "(")
+	if (o < 3 || !match(r, /\)[^)]*$/) || split(substr(r, RSTART + 1), t, " ") < 22) next
+	print $NF, $3, substr(r, 1, o - 2), t[12], t[13], t[20], t[22], substr(r, o + 1, RSTART - o - 1)
+}`
+
+// procsCommand lists the processes under root (normally /proc) with
+// procsAWK. Reading the pid list from ls instead of a /proc/[0-9]* glob
+// keeps the command line short however many processes there are.
+func procsCommand(root string) string {
+	return "ls -ln " + root + " 2>/dev/null | awk -v R=" + root + " '" + procsAWK + "'"
+}
+
+// dfScript prints the filesystem table, at most one df run's worth.
+//
+// df -l reports local filesystems only, so a hung network mount (NFS,
+// CIFS, sshfs) can neither stall the poll nor, because GNU df prints its
+// table only at the end, wipe out the local disks; network shares are
+// best monitored on their server. df still runs under timeout(1) when
+// available, with SIGKILL since a process blocked on a hard mount
+// ignores SIGTERM; busybox before 1.30 spells the duration "-t 3".
+//
+// busybox df has no -l and may lack -T. An unknown option makes df exit
+// 1 without output, and only then is the next variant tried: a timeout
+// (status 124 or 137) or a partial failure with output is final, so a
+// poll never waits for more than one df.
+const dfScript = `T=
+if timeout -s KILL 3 true >/dev/null 2>&1; then T='timeout -s KILL 3'
+elif timeout -s KILL -t 3 true >/dev/null 2>&1; then T='timeout -s KILL -t 3'; fi
+D() { $T df "$@" 2>/dev/null; }
+o=$(D -kPTl); r=$?
+if [ $r -eq 1 ] && [ -z "$o" ]; then o=$(D -kPT); r=$?; fi
+if [ $r -eq 1 ] && [ -z "$o" ]; then o=$(D -kP); fi
+printf '%s\n' "$o"`
+
+// scriptBody is the POSIX sh poll script.
+var scriptBody = `s() { printf '\n` + markerPrefix + `%s:%s\n' "$N" "$1"; }
 s ` + secStat + `; cat /proc/stat 2>/dev/null
 s ` + secMeminfo + `; cat /proc/meminfo 2>/dev/null
 s ` + secLoadavg + `; cat /proc/loadavg 2>/dev/null
 s ` + secUptime + `; cat /proc/uptime 2>/dev/null
 s ` + secNetDev + `; cat /proc/net/dev 2>/dev/null
 s ` + secDF + `
-if command -v timeout >/dev/null 2>&1; then T='timeout 3'; else T=''; fi
-$T df -kPT 2>/dev/null || $T df -kP 2>/dev/null
+` + dfScript + `
 s ` + secUname + `; uname -sr 2>/dev/null
 s ` + secOS + `; cat /etc/os-release 2>/dev/null || cat /usr/lib/os-release 2>/dev/null
 s ` + secHostname + `; hostname 2>/dev/null || cat /proc/sys/kernel/hostname 2>/dev/null
 s ` + secPageSize + `; getconf PAGESIZE 2>/dev/null || echo 4096
 s ` + secClkTck + `; getconf CLK_TCK 2>/dev/null || echo 100
-s ` + secOwners + `; stat -c '%u %n' /proc/[0-9]* 2>/dev/null
 s ` + secPasswd + `; cut -d: -f1,3 /etc/passwd 2>/dev/null
-s ` + secPidStat + `; cat /proc/[0-9]*/stat 2>/dev/null
+s ` + secProcs + `; ` + procsCommand("/proc") + `
 s ` + secEnd + `
 exit 0
 `
@@ -116,7 +157,6 @@ type sample struct {
 	ifaces   map[string]ifaceCounters
 	disks    []metrics.Disk
 	procs    []pidStat
-	owners   map[int]int
 	users    map[int]string
 	pageSize uint64
 	clkTck   uint64
@@ -124,6 +164,11 @@ type sample struct {
 	osName   string
 	system   string
 	kernel   string
+
+	// procsTruncated marks procs as partial: the host listed more than
+	// maxProcRecords processes and only the first ones were kept. CPU
+	// rates of the kept processes stay correct.
+	procsTruncated bool
 }
 
 // parseSample parses the output of pollScript(nonce). It fails only when
@@ -152,8 +197,7 @@ func parseSample(out, nonce string, at time.Time) (*sample, error) {
 		mem:      mem,
 		ifaces:   parseNetDev(sec[secNetDev]),
 		disks:    parseDF(sec[secDF]),
-		procs:    parsePidStats(sec[secPidStat]),
-		owners:   parseOwners(sec[secOwners]),
+		procs:    parseProcs(sec[secProcs]),
 		users:    parsePasswd(sec[secPasswd]),
 		pageSize: parsePositiveInt(sec[secPageSize], 4096),
 		clkTck:   parsePositiveInt(sec[secClkTck], 100),

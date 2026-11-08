@@ -298,6 +298,33 @@ func TestHubReconcilesInventory(t *testing.T) {
 	}
 }
 
+// TestHubManyProcesses checks that a host listing more process data than
+// maxOutput stays online with a capped process list.
+func TestHubManyProcesses(t *testing.T) {
+	busy := sshtest.Start(t, sshtest.Options{Exec: func(_ string, stdin io.Reader, stdout io.Writer) uint32 {
+		script, _ := io.ReadAll(stdin)
+		m := nonceRE.FindSubmatch(script)
+		if m == nil {
+			return 2
+		}
+		io.WriteString(stdout, withExtraProcs(t, "poll1", string(m[1]), maxProcRecords+40000))
+		return 0
+	}})
+	inv := newInventory(testSettings(), serverOf("busy", busy))
+	rec := newRecorder()
+	h := newHub(Options{OnSnapshot: rec.onSnapshot}, inv, newTestDialer(t).Dial)
+	startHub(t, h)
+
+	eventually(t, 10*time.Second, "busy server polled", func() bool {
+		_, n := rec.last("busy")
+		return n >= 1
+	})
+	snap, _ := rec.last("busy")
+	if snap.State != metrics.StateOnline || snap.Err != "" || len(snap.Procs) != topProcesses || snap.Mem.Total == 0 {
+		t.Errorf("snapshot = state %v err %q procs %d mem %d", snap.State, snap.Err, len(snap.Procs), snap.Mem.Total)
+	}
+}
+
 func TestHubSlowServerDoesNotBlockOthers(t *testing.T) {
 	release := make(chan struct{})
 	hung := sshtest.Start(t, sshtest.Options{Exec: func(_ string, stdin io.Reader, _ io.Writer) uint32 {

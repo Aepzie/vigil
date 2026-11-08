@@ -163,15 +163,14 @@ func TestProcessSanitizedAndBounded(t *testing.T) {
 		cores: []coreTimes{{id: 0, times: cpuTimes{user: 100}}},
 		mem:   metrics.Memory{Total: 1 << 30},
 		procs: []pidStat{
-			{pid: 7, comm: "\x1b[31mred\x1b[0m\x07", ticks: 100000, start: 1050},
+			{pid: 7, uid: 0, comm: "\x1b[31mred\x1b[0m\x07", ticks: 100000, start: 1050},
 		},
-		owners: map[int]int{7: 0},
-		users:  map[int]string{0: "root"},
+		users: map[int]string{0: "root"},
 	}
 	snap := buildSnapshot("x", cur, prev, 0)
 	p := snap.Procs[0]
-	if p.Command != "red" {
-		t.Errorf("command not sanitized: %q", p.Command)
+	if p.Command != "red" || p.User != "root" {
+		t.Errorf("command not sanitized or user missing: %q %q", p.Command, p.User)
 	}
 	if p.CPU != 100 {
 		t.Errorf("cpu = %v, want clamp at 100%% * 1 core", p.CPU)

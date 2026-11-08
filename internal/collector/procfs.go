@@ -235,8 +235,7 @@ var pseudoDevices = map[string]bool{
 // collapsed to the shortest mount point. Total is Used+Available, so
 // UsedPct matches df's Capacity column (reserved blocks are not usable).
 // Mount points may contain spaces. Each header line re-detects the
-// format, because the script falls back to `df -kP` when `df -kPT` exits
-// non-zero after printing partial output.
+// format, so concatenated outputs of different df variants also parse.
 func parseDF(text string) []metrics.Disk {
 	hasType, seenHeader := false, false
 	best := make(map[string]metrics.Disk)
@@ -393,74 +392,66 @@ func parsePositiveInt(text string, fallback uint64) uint64 {
 	return n
 }
 
-// pidStat holds the fields of /proc/<pid>/stat vigil uses.
+// pidStat holds the per-process fields vigil uses: the owner of
+// /proc/<pid> and fields of /proc/<pid>/stat.
 type pidStat struct {
 	pid   int
+	uid   int
 	comm  string
 	ticks uint64 // utime + stime
 	start uint64 // starttime in clock ticks since boot
 	rss   uint64 // resident pages
 }
 
-// parsePidStats parses concatenated /proc/<pid>/stat lines. comm is
-// enclosed in parentheses and may itself contain spaces and ')', so the
-// fields are located after the LAST ')'. Lines that do not parse (for
-// example a comm containing a newline) are skipped.
-func parsePidStats(text string) []pidStat {
+// procRecordFields is the number of fields before comm in a procs record.
+const procRecordFields = 7
+
+// parseProcs parses the procs section printed by procsCommand, one record
+// per process:
+//
+//	<pid> <uid> <stat pid> <utime> <stime> <starttime> <rss> <comm>
+//
+// pid is the /proc directory name and uid its owner; the rest comes from
+// /proc/<pid>/stat, whose newlines (comm may contain any byte but NUL)
+// were replaced by spaces remotely, so a process cannot split its record
+// or print extra ones. Records whose stat pid differs from the directory
+// pid, malformed records and repeated pids are dropped regardless.
+func parseProcs(text string) []pidStat {
 	var out []pidStat
+	seen := make(map[int]bool)
 	for line := range strings.Lines(text) {
-		if p, ok := parsePidStat(line); ok {
-			out = append(out, p)
+		p, ok := parseProcRecord(line)
+		if !ok || seen[p.pid] {
+			continue
 		}
+		seen[p.pid] = true
+		out = append(out, p)
 	}
 	return out
 }
 
-func parsePidStat(line string) (pidStat, bool) {
-	open := strings.IndexByte(line, '(')
-	closing := strings.LastIndexByte(line, ')')
-	if open <= 0 || closing < open {
+func parseProcRecord(line string) (pidStat, bool) {
+	tokens, comm := cutFields(strings.TrimRight(line, "\r\n"), procRecordFields)
+	if len(tokens) < procRecordFields {
 		return pidStat{}, false
 	}
-	pid, err := strconv.Atoi(strings.TrimSpace(line[:open]))
-	if err != nil || pid <= 0 {
+	pid, err := strconv.Atoi(tokens[0])
+	if err != nil || pid <= 0 || tokens[2] != tokens[0] {
 		return pidStat{}, false
 	}
-	fields := strings.Fields(line[closing+1:])
-	if len(fields) < 22 {
+	uid, err := strconv.Atoi(tokens[1])
+	if err != nil || uid < 0 {
 		return pidStat{}, false
 	}
 	var v [4]uint64
-	for i, idx := range [4]int{11, 12, 19, 21} {
-		n, err := strconv.ParseUint(fields[idx], 10, 64)
+	for i := range v {
+		n, err := strconv.ParseUint(tokens[3+i], 10, 64)
 		if err != nil {
 			return pidStat{}, false
 		}
 		v[i] = n
 	}
-	return pidStat{pid: pid, comm: line[open+1 : closing], ticks: v[0] + v[1], start: v[2], rss: v[3]}, true
-}
-
-// parseOwners parses `stat -c '%u %n' /proc/[0-9]*` into pid → uid.
-func parseOwners(text string) map[int]int {
-	out := make(map[int]int)
-	for line := range strings.Lines(text) {
-		uidStr, path, ok := strings.Cut(strings.TrimSpace(line), " ")
-		if !ok {
-			continue
-		}
-		pidStr, ok := strings.CutPrefix(path, "/proc/")
-		if !ok {
-			continue
-		}
-		uid, err1 := strconv.Atoi(uidStr)
-		pid, err2 := strconv.Atoi(pidStr)
-		if err1 != nil || err2 != nil || uid < 0 || pid <= 0 {
-			continue
-		}
-		out[pid] = uid
-	}
-	return out
+	return pidStat{pid: pid, uid: uid, comm: comm, ticks: satAdd(v[0], v[1]), start: v[2], rss: v[3]}, true
 }
 
 // parsePasswd parses "name:uid" lines (cut -d: -f1,3 /etc/passwd).

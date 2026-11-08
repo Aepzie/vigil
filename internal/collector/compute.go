@@ -154,7 +154,9 @@ func processList(cur, prev *sample, cpuCount int) []metrics.Process {
 		prevBootTicks = prev.uptime * float64(cur.clkTck)
 	}
 	procs := make([]metrics.Process, 0, len(cur.procs))
+	uids := make(map[int]int, len(cur.procs))
 	for _, p := range cur.procs {
+		uids[p.pid] = p.uid
 		rss := satMul(p.rss, cur.pageSize)
 		proc := metrics.Process{
 			PID:     p.pid,
@@ -186,16 +188,12 @@ func processList(cur, prev *sample, cpuCount int) []metrics.Process {
 
 	for i := range procs {
 		procs[i].Command = cleanString(procs[i].Command)
-		procs[i].User = userName(cur, procs[i].PID)
+		procs[i].User = userName(cur, uids[procs[i].PID])
 	}
 	return procs
 }
 
-func userName(s *sample, pid int) string {
-	uid, ok := s.owners[pid]
-	if !ok {
-		return ""
-	}
+func userName(s *sample, uid int) string {
 	if name, ok := s.users[uid]; ok {
 		return name
 	}

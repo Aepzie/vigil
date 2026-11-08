@@ -276,44 +276,56 @@ func TestParseUname(t *testing.T) {
 	}
 }
 
-func TestParsePidStats(t *testing.T) {
-	procs := parsePidStats(readFixture(t, "poll2", "pidstat"))
+func TestParseProcs(t *testing.T) {
+	procs := parseProcs(readFixture(t, "poll2", "procs"))
 	byPID := make(map[int]pidStat)
 	for _, p := range procs {
 		byPID[p.pid] = p
 	}
-	if _, ok := byPID[8000]; ok {
-		t.Error("record split by a newline in comm must be skipped")
-	}
-	if len(procs) != 16 {
-		t.Errorf("parsed %d processes, want 16", len(procs))
+	if len(procs) != 19 || len(byPID) != len(procs) {
+		t.Errorf("parsed %d processes (%d distinct), want 19", len(procs), len(byPID))
 	}
 	tests := []struct {
 		pid  int
 		want pidStat
 	}{
-		{1, pidStat{pid: 1, comm: "systemd", ticks: 402, start: 2, rss: 3000}},
-		{2345, pidStat{pid: 2345, comm: "weird) b", ticks: 100, start: 9100, rss: 1000}},
-		{1500, pidStat{pid: 1500, comm: "tmux: server", ticks: 20, start: 9300, rss: 2000}},
-		{4567, pidStat{pid: 4567, comm: "kworker/0:1-events", ticks: 15, start: 3, rss: 0}},
+		{1, pidStat{pid: 1, uid: 0, comm: "systemd", ticks: 402, start: 2, rss: 3000}},
+		{2345, pidStat{pid: 2345, uid: 1000, comm: "weird) b", ticks: 100, start: 9100, rss: 1000}},
+		{1500, pidStat{pid: 1500, uid: 4242, comm: "tmux: server", ticks: 20, start: 9300, rss: 2000}},
+		{4567, pidStat{pid: 4567, uid: 0, comm: "kworker/0:1-events", ticks: 15, start: 3, rss: 0}},
+		{8000, pidStat{pid: 8000, uid: 1000, comm: "evil name", ticks: 0, start: 9600, rss: 10}},
+		{666, pidStat{pid: 666, uid: 1000, comm: "1 (sshd", ticks: 0, start: 9650, rss: 20}},
+		{9001, pidStat{pid: 9001, uid: 1000, comm: "a (b) c", ticks: 0, start: 9660, rss: 30}},
 	}
 	for _, tt := range tests {
 		if got := byPID[tt.pid]; got != tt.want {
 			t.Errorf("pid %d = %+v, want %+v", tt.pid, got, tt.want)
 		}
 	}
-	for _, bad := range []string{"", "x (a) S", "0 (a) S 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21", "12 a) S"} {
-		if _, ok := parsePidStat(bad); ok {
-			t.Errorf("parsePidStat(%q) succeeded", bad)
+	if _, ok := byPID[7777]; ok {
+		t.Error("record whose stat pid differs from its /proc pid was accepted")
+	}
+	for _, bad := range []string{
+		"",
+		"garbage line",
+		"7 0 7 1 2 3",
+		"7 0 8 1 2 3 4 forged",
+		"0 0 0 1 2 3 4 zero",
+		"x 0 x 1 2 3 4 nan",
+		"7 -1 7 1 2 3 4 neguid",
+		"7 0 7 1 -2 3 4 negticks",
+		"7 0 7 1 2 3 18446744073709551616 overflow",
+	} {
+		if p, ok := parseProcRecord(bad); ok {
+			t.Errorf("parseProcRecord(%q) = %+v", bad, p)
 		}
+	}
+	if p, ok := parseProcRecord("7 0 7 18446744073709551615 9 3 4\r\n"); !ok || p.comm != "" || p.ticks != ^uint64(0) {
+		t.Errorf("empty comm / saturated ticks: %+v, %v", p, ok)
 	}
 }
 
-func TestParseOwnersAndPasswd(t *testing.T) {
-	owners := parseOwners("0 /proc/1\n1000 /proc/1234\nbad line\n-1 /proc/5\n7 /etc/passwd\n")
-	if !reflect.DeepEqual(owners, map[int]int{1: 0, 1234: 1000}) {
-		t.Errorf("owners = %v", owners)
-	}
+func TestParsePasswd(t *testing.T) {
 	users := parsePasswd("root:0\nalice:1000\ntoor:0\n:5\nbob:x\nevil\x1b[1m:7\n")
 	want := map[int]string{0: "root", 1000: "alice", 7: "evil"}
 	if !reflect.DeepEqual(users, want) {
