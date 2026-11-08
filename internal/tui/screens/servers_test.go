@@ -252,3 +252,85 @@ func TestSplitTags(t *testing.T) {
 		}
 	}
 }
+
+func expectToast(t *testing.T, cmd tea.Cmd, text string) {
+	t.Helper()
+	toast, ok := find[ui.ToastMsg](collect(cmd))
+	if !ok || toast.Text != text {
+		t.Fatalf("want toast %q, got %#v", text, collect(cmd))
+	}
+}
+
+func TestServersReadOnly(t *testing.T) {
+	d := testDeps(t)
+	d.ReadOnly = true
+	s := newServers(d)
+	s.Update(ui.FleetMsg{Fleet: fakeFleet()})
+
+	for _, key := range []string{"a", "e", "x", "delete"} {
+		_, cmd := send(s, key)
+		if s.Capturing() {
+			t.Fatalf("%s opened a dialog in a read-only session", key)
+		}
+		expectToast(t, cmd, readOnlyNotice)
+	}
+	for _, a := range []serversAction{serversAdd, serversEdit, serversDelete} {
+		_, cmd := s.Update(serversActionMsg{action: a})
+		if s.Capturing() {
+			t.Fatalf("palette action %d opened a dialog", a)
+		}
+		expectToast(t, cmd, readOnlyNotice)
+	}
+	for _, h := range s.Hints() {
+		if h.Key == "a" || h.Key == "e" || h.Key == "x" {
+			t.Fatalf("mutation hint %+v shown", h)
+		}
+	}
+	if cmds := s.Commands(); len(cmds) != 1 || cmds[0].Title != "Test connection" {
+		t.Fatalf("read-only commands: %+v", cmds)
+	}
+	if _, cmd := send(s, "t"); cmd == nil {
+		t.Fatal("test connection must stay available")
+	}
+
+	srv := store.Server{Name: "web-09", Host: "10.0.0.9", Port: 22, User: "ops"}
+	if msg := saveServerCmd(d, srv, false)().(serverSavedMsg); !errors.Is(msg.err, errReadOnly) {
+		t.Fatalf("save in read-only session: %v", msg.err)
+	}
+	if msg := deleteServerCmd(d, "s1", "web-01")().(serverDeletedMsg); !errors.Is(msg.err, errReadOnly) {
+		t.Fatalf("delete in read-only session: %v", msg.err)
+	}
+	if n := len(d.Store.Servers()); n != 0 {
+		t.Fatalf("read-only session changed the store: %d servers", n)
+	}
+}
+
+func TestServersMaxServers(t *testing.T) {
+	d := testDeps(t)
+	d.MaxServers = len(fakeFleet().Servers)
+	s := newServers(d)
+	s.Update(ui.FleetMsg{Fleet: fakeFleet()})
+	_, cmd := send(s, "a")
+	if s.form != nil {
+		t.Fatal("add form opened at the server limit")
+	}
+	expectToast(t, cmd, "server limit reached (4)")
+	if send(s, "e"); s.form == nil {
+		t.Fatal("editing must stay possible at the limit")
+	}
+
+	d.MaxServers = 1
+	first := store.Server{Name: "web-09", Host: "10.0.0.9", Port: 22, User: "ops"}
+	saved := saveServerCmd(d, first, false)().(serverSavedMsg)
+	if saved.err != nil {
+		t.Fatalf("first add: %v", saved.err)
+	}
+	second := store.Server{Name: "web-10", Host: "10.0.0.10", Port: 22, User: "ops"}
+	if msg := saveServerCmd(d, second, false)().(serverSavedMsg); msg.err == nil {
+		t.Fatal("add beyond the limit succeeded")
+	}
+	saved.srv.User = "root"
+	if msg := saveServerCmd(d, saved.srv, true)().(serverSavedMsg); msg.err != nil {
+		t.Fatalf("update at the limit: %v", msg.err)
+	}
+}

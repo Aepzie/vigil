@@ -2,6 +2,7 @@ package screens
 
 import (
 	"errors"
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -35,6 +36,24 @@ const (
 
 // errNoStore is reported when the session has no inventory store.
 var errNoStore = errors.New("no server store available")
+
+// errReadOnly is reported for mutations in a read-only session.
+var errReadOnly = errors.New(readOnlyNotice)
+
+// readOnlyNotice is the toast shown when a read-only session tries to
+// change shared state.
+const readOnlyNotice = "read-only demo"
+
+// isReadOnly reports whether the session must not change shared state.
+func isReadOnly(d *ui.Deps) bool { return d != nil && d.ReadOnly }
+
+// refuseReadOnly tells the user that a mutation is not allowed.
+func refuseReadOnly() tea.Cmd { return ui.Toast(theme.ToneWarn, readOnlyNotice) }
+
+// serverLimitError reports that the inventory is full.
+func serverLimitError(limit int) error {
+	return fmt.Errorf("server limit reached (%d)", limit)
+}
 
 // serverSavedMsg is the result of an add or update.
 type serverSavedMsg struct {
@@ -153,11 +172,11 @@ func (s *servers) apply(a serversAction) tea.Cmd {
 	}
 	switch a {
 	case serversAdd:
-		s.openAdd()
+		return s.openAdd()
 	case serversEdit:
-		s.openEdit()
+		return s.openEdit()
 	case serversDelete:
-		s.openDelete()
+		return s.openDelete()
 	case serversTest:
 		return s.testCmd()
 	}
@@ -181,11 +200,11 @@ func (s *servers) key(msg tea.KeyPressMsg) tea.Cmd {
 	case "G", "end":
 		s.move(len(s.fleet.Servers))
 	case "a":
-		s.openAdd()
+		return s.openAdd()
 	case "e":
-		s.openEdit()
+		return s.openEdit()
 	case "x", "delete":
-		s.openDelete()
+		return s.openDelete()
 	case "t":
 		return s.testCmd()
 	case "enter":
@@ -231,28 +250,51 @@ func newServerForm(title string, srv store.Server) *serverForm {
 	}
 }
 
-func (s *servers) openAdd() {
+func (s *servers) openAdd() tea.Cmd {
+	if isReadOnly(s.d) {
+		return refuseReadOnly()
+	}
+	if limit := s.maxServers(); limit > 0 && len(s.fleet.Servers) >= limit {
+		return ui.Toast(theme.ToneWarn, serverLimitError(limit).Error())
+	}
 	s.form = newServerForm("Add server", store.Server{})
+	return nil
 }
 
-func (s *servers) openEdit() {
+func (s *servers) openEdit() tea.Cmd {
+	if isReadOnly(s.d) {
+		return refuseReadOnly()
+	}
 	srv, ok := s.selectedServer()
 	if !ok {
-		return
+		return nil
 	}
 	s.form = newServerForm("Edit "+clean(srv.Name), srv)
+	return nil
 }
 
-func (s *servers) openDelete() {
+func (s *servers) openDelete() tea.Cmd {
+	if isReadOnly(s.d) {
+		return refuseReadOnly()
+	}
 	srv, ok := s.selectedServer()
 	if !ok {
-		return
+		return nil
 	}
 	s.confirm = &confirmDialog{
 		title:  "Delete server",
 		prompt: "Delete " + clean(srv.Name) + "? y/n",
 		target: srv.ID,
 	}
+	return nil
+}
+
+// maxServers is the inventory cap of the session, 0 for none.
+func (s *servers) maxServers() int {
+	if s.d == nil {
+		return 0
+	}
+	return s.d.MaxServers
 }
 
 func (s *servers) confirmKey(msg tea.KeyPressMsg) tea.Cmd {
@@ -350,14 +392,20 @@ func splitTags(raw string) []string {
 	return tags
 }
 
-// saveServerCmd validates and persists a server off the UI goroutine.
+// saveServerCmd validates and persists a server off the UI goroutine. It
+// refuses read-only sessions and additions beyond d.MaxServers.
 func saveServerCmd(d *ui.Deps, srv store.Server, edited bool) tea.Cmd {
 	var st *store.Store
+	limit := 0
 	if d != nil {
-		st = d.Store
+		st, limit = d.Store, d.MaxServers
 	}
+	readOnly := isReadOnly(d)
 	return func() tea.Msg {
-		if st == nil {
+		switch {
+		case readOnly:
+			return serverSavedMsg{srv: srv, edited: edited, err: errReadOnly}
+		case st == nil:
 			return serverSavedMsg{srv: srv, edited: edited, err: errNoStore}
 		}
 		if err := srv.Validate(); err != nil {
@@ -365,6 +413,9 @@ func saveServerCmd(d *ui.Deps, srv store.Server, edited bool) tea.Cmd {
 		}
 		if edited {
 			return serverSavedMsg{srv: srv, edited: true, err: st.Update(srv)}
+		}
+		if limit > 0 && len(st.Servers()) >= limit {
+			return serverSavedMsg{srv: srv, err: serverLimitError(limit)}
 		}
 		stored, err := st.Add(srv)
 		return serverSavedMsg{srv: stored, err: err}
@@ -377,8 +428,12 @@ func deleteServerCmd(d *ui.Deps, id, name string) tea.Cmd {
 	if d != nil {
 		st = d.Store
 	}
+	readOnly := isReadOnly(d)
 	return func() tea.Msg {
-		if st == nil {
+		switch {
+		case readOnly:
+			return serverDeletedMsg{id: id, name: name, err: errReadOnly}
+		case st == nil:
 			return serverDeletedMsg{id: id, name: name, err: errNoStore}
 		}
 		return serverDeletedMsg{id: id, name: name, err: st.Delete(id)}
@@ -456,6 +511,10 @@ func (s *servers) Hints() []ui.Hint {
 		return []ui.Hint{hint("y", "delete"), hint("n", "keep")}
 	case s.form != nil:
 		return formHints()
+	case isReadOnly(s.d) && len(s.fleet.Servers) == 0:
+		return nil
+	case isReadOnly(s.d):
+		return []ui.Hint{hint("j/k", "move"), hint("enter", "shell"), hint("t", "test"), hint("d", "detail")}
 	case len(s.fleet.Servers) == 0:
 		return []ui.Hint{hint("a", "add server")}
 	default:
@@ -471,11 +530,15 @@ func (s *servers) Commands() []ui.Command {
 	act := func(a serversAction) func() tea.Cmd {
 		return func() tea.Cmd { return emit(serversActionMsg{action: a}) }
 	}
+	test := ui.Command{Title: "Test connection", Hint: "t", Run: act(serversTest)}
+	if isReadOnly(s.d) {
+		return []ui.Command{test}
+	}
 	return []ui.Command{
 		{Title: "Add server", Hint: "a", Run: act(serversAdd)},
 		{Title: "Edit selected server", Hint: "e", Run: act(serversEdit)},
 		{Title: "Delete selected server", Hint: "x", Run: act(serversDelete)},
-		{Title: "Test connection", Hint: "t", Run: act(serversTest)},
+		test,
 	}
 }
 
@@ -523,6 +586,10 @@ func (s *servers) table(w, h int, focused bool) string {
 	iw, ih := widgets.PanelInner(w, h)
 	cols := fitColumns(s.columns(), iw)
 	columns, cells := tableData(cols, rows)
+	empty := "No servers yet — press a to add one"
+	if isReadOnly(s.d) {
+		empty = "No servers"
+	}
 	return widgets.Panel(t, widgets.PanelOpts{
 		Width:   w,
 		Height:  h,
@@ -532,7 +599,7 @@ func (s *servers) table(w, h int, focused bool) string {
 		Body: widgets.Table(t, widgets.TableOpts{
 			Width: iw, Height: ih, Columns: columns, Rows: cells,
 			Selected: rowIndex(rows, s.selected),
-			Empty:    "No servers yet — press a to add one",
+			Empty:    empty,
 		}),
 	})
 }

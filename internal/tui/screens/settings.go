@@ -224,6 +224,9 @@ func (s *settingsScreen) apply(a settingsAction) tea.Cmd {
 	if s.editing {
 		return nil
 	}
+	if isReadOnly(s.d) && a != settingsRevert {
+		return refuseReadOnly()
+	}
 	switch a {
 	case settingsSave:
 		return s.save()
@@ -240,12 +243,21 @@ func (s *settingsScreen) key(msg tea.KeyPressMsg) tea.Cmd {
 	switch msg.String() {
 	case "j", "down":
 		s.cursor = stepIndex(s.cursor, 1, len(s.fields))
+		return nil
 	case "k", "up":
 		s.cursor = stepIndex(s.cursor, -1, len(s.fields))
+		return nil
 	case "g", "home":
 		s.cursor = 0
+		return nil
 	case "G", "end":
 		s.cursor = len(s.fields) - 1
+		return nil
+	}
+	if isReadOnly(s.d) {
+		return s.refuseEditKey(msg, field)
+	}
+	switch msg.String() {
 	case "enter", "e":
 		if field.enum {
 			s.cycleCompat(1)
@@ -264,6 +276,20 @@ func (s *settingsScreen) key(msg tea.KeyPressMsg) tea.Cmd {
 		return s.save()
 	case "u":
 		s.revert()
+	}
+	return nil
+}
+
+// refuseEditKey answers keys that would change settings in a read-only
+// session.
+func (s *settingsScreen) refuseEditKey(msg tea.KeyPressMsg, field settingField) tea.Cmd {
+	switch msg.String() {
+	case "enter", "e", "ctrl+s", "S":
+		return refuseReadOnly()
+	case "left", "h", "right", "l", "space":
+		if field.enum {
+			return refuseReadOnly()
+		}
 	}
 	return nil
 }
@@ -315,6 +341,9 @@ func (s *settingsScreen) revert() {
 
 // save validates the draft and persists it off the UI goroutine.
 func (s *settingsScreen) save() tea.Cmd {
+	if isReadOnly(s.d) {
+		return refuseReadOnly()
+	}
 	if s.saving {
 		return nil
 	}
@@ -367,6 +396,9 @@ func (s *settingsScreen) Hints() []ui.Hint {
 	if s.editing {
 		return []ui.Hint{hint("enter", "confirm"), hint("esc", "cancel")}
 	}
+	if isReadOnly(s.d) {
+		return []ui.Hint{hint("j/k", "move")}
+	}
 	edit := hint("enter", "edit")
 	if s.fields[s.cursor].enum {
 		edit = hint("←/→", "cycle")
@@ -380,6 +412,9 @@ func (s *settingsScreen) Hints() []ui.Hint {
 
 // Commands implements ui.Screen.
 func (s *settingsScreen) Commands() []ui.Command {
+	if isReadOnly(s.d) {
+		return nil
+	}
 	act := func(a settingsAction) func() tea.Cmd {
 		return func() tea.Cmd { return emit(settingsActionMsg{action: a}) }
 	}
@@ -450,7 +485,10 @@ func (s *settingsScreen) formPanel(w, h int) string {
 	}
 	lines := append(rows, footer...)
 	info := "saved"
-	if s.dirty() {
+	switch {
+	case isReadOnly(s.d):
+		info = "read-only"
+	case s.dirty():
 		info = "unsaved changes"
 	}
 	return widgets.Panel(t, widgets.PanelOpts{
@@ -519,6 +557,8 @@ func (s *settingsScreen) row(i, iw int, withHelp bool) string {
 func (s *settingsScreen) statusLine() string {
 	t := s.t
 	switch {
+	case isReadOnly(s.d):
+		return fg(t.P.Faint, readOnlyNotice+glyphSep+"settings cannot be changed")
 	case s.saving:
 		return fg(t.P.Muted, "saving…")
 	case s.note != "":

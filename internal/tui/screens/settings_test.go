@@ -181,3 +181,38 @@ func TestValidateSettings(t *testing.T) {
 		}
 	}
 }
+
+func TestSettingsReadOnly(t *testing.T) {
+	d := testDeps(t)
+	d.ReadOnly = true
+	s := newSettings(d)
+	s.Update(ui.FleetMsg{Fleet: fakeFleet()})
+	before := s.draft
+
+	for _, key := range []string{"enter", "e", "ctrl+s", "S"} {
+		_, cmd := send(s, key)
+		if s.Capturing() || s.saving {
+			t.Fatalf("%s started an edit or save in a read-only session", key)
+		}
+		expectToast(t, cmd, readOnlyNotice)
+	}
+	send(s, "G")
+	for _, key := range []string{"left", "right", "space"} {
+		_, cmd := send(s, key)
+		expectToast(t, cmd, readOnlyNotice)
+	}
+	for _, a := range []settingsAction{settingsSave, settingsCycleCompat} {
+		_, cmd := s.Update(settingsActionMsg{action: a})
+		expectToast(t, cmd, readOnlyNotice)
+	}
+	if s.draft != before || s.saving {
+		t.Fatal("read-only session changed the draft")
+	}
+	if cmds := s.Commands(); len(cmds) != 0 {
+		t.Fatalf("read-only commands: %+v", cmds)
+	}
+	if hints := s.Hints(); len(hints) != 1 || hints[0].Key != "j/k" {
+		t.Fatalf("read-only hints: %+v", hints)
+	}
+	checkSize(t, s.View(100, 30), 100, 30)
+}

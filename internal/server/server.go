@@ -82,6 +82,7 @@ type Config struct {
 	// Public lets anyone log in without credentials. It exists for
 	// `vigil demo --serve --public` and is refused unless Deps.Dialer is
 	// nil, so no remote shell can be reached through a public server.
+	// Public sessions are read-only (ui.Deps.ReadOnly).
 	Public bool
 }
 
@@ -99,6 +100,9 @@ type Deps struct {
 	Source collector.Source
 	// PollNow, when non-nil, replaces Hub.PollNow.
 	PollNow func(id string)
+	// MaxServers caps how many servers sessions can add (demo mode); 0
+	// means no limit.
+	MaxServers int
 }
 
 // NewLogger returns the default server logger writing to stderr.
@@ -435,6 +439,9 @@ func (s *server) uiDeps(sess ssh.Session, term string, st *session) *ui.Deps {
 		DataDir:   s.cfg.DataDir,
 		Listen:    s.cfg.Addr,
 		Term:      sanitize.Line(term),
+		// Anonymous viewers of a public server share one store.
+		ReadOnly:   s.cfg.Public,
+		MaxServers: s.deps.MaxServers,
 	}
 	if d.Source == nil {
 		d.Source = s.deps.Hub

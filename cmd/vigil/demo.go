@@ -25,6 +25,10 @@ import (
 // charts are full immediately.
 const demoPrime = 300
 
+// demoMaxServers caps the shared demo inventory so sessions cannot grow it
+// without bound.
+const demoMaxServers = 50
+
 // demoManagerKey is shown in Settings in demo mode instead of a real key.
 const demoManagerKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDemoDemoDemoDemoDemoDemoDemoDemoDemoDemoDemo vigil-demo"
 
@@ -75,6 +79,7 @@ func (f *demoFleet) deps(user, listen, term string) *ui.Deps {
 		DataDir:    "(demo, in memory)",
 		Listen:     listen,
 		Term:       term,
+		MaxServers: demoMaxServers,
 	}
 }
 
@@ -145,7 +150,7 @@ func serveDemo(ctx context.Context, fleet *demoFleet, listen, data string, publi
 			return fmt.Errorf("no users in %s: create one with `vigil user add NAME` or use --public", dataDir)
 		}
 	} else {
-		fmt.Fprintln(std.err, "vigil demo: public mode, anyone can log in (no shells, synthetic data only)")
+		fmt.Fprintln(std.err, "vigil demo: public mode, anyone can log in (read-only, no shells, synthetic data only)")
 	}
 	return server.Run(ctx, server.Config{
 		Addr:        listen,
@@ -155,12 +160,13 @@ func serveDemo(ctx context.Context, fleet *demoFleet, listen, data string, publi
 		MaxSessions: maxSessions,
 		Public:      public,
 	}, server.Deps{
-		Theme:     theme.Default(),
-		Store:     fleet.store,
-		Alerts:    fleet.engine,
-		Auth:      authn,
-		Source:    fleet.source,
-		PollNow:   fleet.source.PollNow,
-		StartedAt: time.Now(),
+		Theme:      theme.Default(),
+		Store:      fleet.store,
+		Alerts:     fleet.engine,
+		Auth:       authn,
+		Source:     fleet.source,
+		PollNow:    fleet.source.PollNow,
+		StartedAt:  time.Now(),
+		MaxServers: demoMaxServers,
 	})
 }
