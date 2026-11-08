@@ -157,38 +157,55 @@ func (s *session) forwardSizes(ctx context.Context, send func(tea.Msg)) {
 	}
 }
 
+// shellStartTimeout is how long a shell command keeps the session input
+// reserved while waiting for tea.Exec to run it; after that the input
+// returns to the program.
+var shellStartTimeout = 5 * time.Second
+
 // attach creates a shell with the current size and makes it the target of
-// window changes and client input. Creation happens under the lock so no
-// resize can slip between reading the size and registering the shell.
-func (s *session) attach(start func(width, height int) remoteShell) (remoteShell, *shellInput) {
+// window changes. Creation happens under the lock so no resize can slip
+// between reading the size and registering the shell.
+func (s *session) attach(start func(width, height int) remoteShell) remoteShell {
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	shell := start(s.width, s.height)
 	s.shell = shell
-	s.mu.Unlock()
-	return shell, s.in.attachShell()
+	return shell
 }
 
-// detach unregisters shell and hands input back to the program.
-func (s *session) detach(shell remoteShell, in *shellInput) {
+// detach unregisters shell.
+func (s *session) detach(shell remoteShell) {
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	if s.shell == shell {
 		s.shell = nil
 	}
-	s.mu.Unlock()
-	s.in.detachShell(in)
 }
 
 // shellFunc returns a ui.ShellFunc whose commands open shells through
 // start.
 func (s *session) shellFunc(start func(srv store.Server, width, height int) remoteShell) ui.ShellFunc {
 	return func(srv store.Server) tea.ExecCommand {
-		return &shellCommand{
-			sess: s,
-			start: func(width, height int) remoteShell {
-				return start(srv, width, height)
-			},
-		}
+		return s.newShellCommand(func(width, height int) remoteShell {
+			return start(srv, width, height)
+		})
 	}
+}
+
+// newShellCommand returns a command for a shell opened through start and
+// reserves the session input for it right away.
+//
+// tea.Exec first stops the program's input reader and waits up to 500ms
+// for its pending read to return. A read blocked in the inputMux only
+// returns when the program loses ownership, so taking ownership when the
+// command is built (before tea.Exec runs) ends that read at once, and
+// keys typed during the hand-over are buffered for the shell instead of
+// being swallowed by the stopping reader. If the command does not start
+// within shellStartTimeout, the input returns to the program.
+func (s *session) newShellCommand(start func(width, height int) remoteShell) *shellCommand {
+	c := &shellCommand{sess: s, start: start, in: s.in.attachShell()}
+	c.expiry = time.AfterFunc(shellStartTimeout, c.expire)
+	return c
 }
 
 // shellCommand adapts a remote shell to tea.ExecCommand for one session.
@@ -198,6 +215,48 @@ func (s *session) shellFunc(start func(srv store.Server, width, height int) remo
 type shellCommand struct {
 	sess  *session
 	start func(width, height int) remoteShell
+
+	mu sync.Mutex
+	// in is the reserved session input; nil while the program owns it.
+	in      *shellInput
+	expiry  *time.Timer
+	running bool
+}
+
+// expire hands the reserved input back to the program unless the shell
+// started.
+func (c *shellCommand) expire() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.running || c.in == nil {
+		return
+	}
+	c.sess.in.detachShell(c.in)
+	c.in = nil
+}
+
+// claimInput marks the command running and returns its input, reserving
+// it again if it expired.
+func (c *shellCommand) claimInput() *shellInput {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.expiry.Stop()
+	c.running = true
+	if c.in == nil {
+		c.in = c.sess.in.attachShell()
+	}
+	return c.in
+}
+
+// releaseInput hands the input back to the program.
+func (c *shellCommand) releaseInput() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.running = false
+	if c.in != nil {
+		c.sess.in.detachShell(c.in)
+		c.in = nil
+	}
 }
 
 // SetStdin implements tea.ExecCommand; the session input is used instead.
@@ -212,8 +271,10 @@ func (c *shellCommand) SetStderr(io.Writer) {}
 // Run starts the shell with the current window size and blocks until it
 // exits. While it runs, window changes are forwarded to it directly.
 func (c *shellCommand) Run() error {
-	shell, in := c.sess.attach(c.start)
-	defer c.sess.detach(shell, in)
+	in := c.claimInput()
+	defer c.releaseInput()
+	shell := c.sess.attach(c.start)
+	defer c.sess.detach(shell)
 	shell.SetStdin(in)
 	shell.SetStdout(c.sess.out)
 	shell.SetStderr(c.sess.out)

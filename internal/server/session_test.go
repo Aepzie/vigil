@@ -258,6 +258,168 @@ func TestResizeAfterShellEnds(t *testing.T) {
 	}
 }
 
+// readingShell is a remote shell that reads want from its stdin.
+type readingShell struct {
+	want    int
+	stdin   io.Reader
+	started chan time.Time
+	got     chan string
+}
+
+func newReadingShell(want int) *readingShell {
+	return &readingShell{want: want, started: make(chan time.Time, 1), got: make(chan string, 1)}
+}
+
+func (r *readingShell) Resize(int, int)       {}
+func (r *readingShell) SetStdin(in io.Reader) { r.stdin = in }
+func (r *readingShell) SetStdout(io.Writer)   {}
+func (r *readingShell) SetStderr(io.Writer)   {}
+func (r *readingShell) Run() error {
+	r.started <- time.Now()
+	buf := make([]byte, r.want)
+	n, err := io.ReadFull(r.stdin, buf)
+	r.got <- string(buf[:n])
+	return err
+}
+
+// execModel opens a shell with tea.Exec on "s" and quits when it exits.
+type execModel struct {
+	ready chan struct{}
+	open  func() tea.ExecCommand
+}
+
+type shellExitedMsg struct{ err error }
+
+func (m execModel) Init() tea.Cmd { return nil }
+
+func (m execModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyPressMsg:
+		switch msg.String() {
+		case "r":
+			close(m.ready)
+		case "s":
+			return m, tea.Exec(m.open(), func(err error) tea.Msg { return shellExitedMsg{err} })
+		}
+	case shellExitedMsg:
+		return m, tea.Quit
+	}
+	return m, nil
+}
+
+func (m execModel) View() tea.View { return tea.NewView("") }
+
+// TestShellHandOverIsFast runs a real Bubble Tea program on the session
+// input: opening a shell must not wait for Bubble Tea's 500ms read-loop
+// timeout, and keys typed while the program hands over must reach the
+// shell.
+func TestShellHandOverIsFast(t *testing.T) {
+	s := newSession(80, 24, io.Discard)
+	src, feed := io.Pipe()
+	defer feed.Close()
+	go s.readInput(src)
+	defer s.in.close()
+
+	shell := newReadingShell(len("ls\r"))
+	shellFunc := s.shellFunc(func(store.Server, int, int) remoteShell { return shell })
+	built := make(chan struct{})
+	model := execModel{
+		ready: make(chan struct{}),
+		open: func() tea.ExecCommand {
+			defer close(built)
+			return shellFunc(store.Server{Name: "web"})
+		},
+	}
+	p := tea.NewProgram(model,
+		tea.WithInput(s.in.program()),
+		tea.WithOutput(io.Discard),
+		tea.WithoutSignalHandler(),
+		tea.WithWindowSize(80, 24),
+	)
+	runErr := make(chan error, 1)
+	go func() {
+		_, err := p.Run()
+		runErr <- err
+	}()
+	defer p.Kill()
+
+	_, _ = feed.Write([]byte("r"))
+	select {
+	case <-model.ready:
+	case <-time.After(5 * time.Second):
+		t.Fatal("program did not start reading input")
+	}
+
+	pressed := time.Now()
+	_, _ = feed.Write([]byte("s"))
+	select {
+	case <-built:
+	case <-time.After(5 * time.Second):
+		t.Fatal("shell command was not built")
+	}
+	_, _ = feed.Write([]byte("ls\r"))
+
+	select {
+	case started := <-shell.started:
+		if d := started.Sub(pressed); d >= 100*time.Millisecond {
+			t.Errorf("shell started %v after the key press, want < 100ms", d)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("shell did not start")
+	}
+	select {
+	case got := <-shell.got:
+		if got != "ls\r" {
+			t.Fatalf("shell read %q, want %q", got, "ls\r")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("keys typed during the hand-over were lost")
+	}
+	select {
+	case err := <-runErr:
+		if err != nil {
+			t.Fatalf("program: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("program did not resume after the shell")
+	}
+}
+
+// TestShellInputReturnsWhenNotRun checks that a shell command that is
+// built but never run gives the input back to the program.
+func TestShellInputReturnsWhenNotRun(t *testing.T) {
+	defer func(d time.Duration) { shellStartTimeout = d }(shellStartTimeout)
+	shellStartTimeout = 50 * time.Millisecond
+
+	s := newSession(80, 24, io.Discard)
+	src, feed := io.Pipe()
+	defer feed.Close()
+	go s.readInput(src)
+	defer s.in.close()
+
+	pending := readAsync(s.in.program())
+	shell := newFakeShell()
+	cmd := s.shellFunc(func(store.Server, int, int) remoteShell { return shell })(store.Server{})
+	expectRead(t, pending, "", io.EOF)
+
+	time.Sleep(4 * shellStartTimeout)
+	go func() { _, _ = feed.Write([]byte("k")) }()
+	expectRead(t, readAsync(s.in.program()), "k", nil)
+
+	// A late Run still gets the input and returns it afterwards.
+	runDone := make(chan error, 1)
+	go func() { runDone <- cmd.Run() }()
+	<-shell.started
+	go func() { _, _ = feed.Write([]byte("x")) }()
+	expectRead(t, readAsync(shell.stdin), "x", nil)
+	close(shell.release)
+	if err := <-runDone; err != nil {
+		t.Fatal(err)
+	}
+	go func() { _, _ = feed.Write([]byte("q")) }()
+	expectRead(t, readAsync(s.in.program()), "q", nil)
+}
+
 func TestWatchIdle(t *testing.T) {
 	const timeout = 600 * time.Millisecond
 	s := newSession(80, 24, io.Discard)
