@@ -26,22 +26,41 @@ remote user**, so dashboard accounts are as sensitive as that access.
   Unknown user names are checked against a dummy hash, so response times
   do not reveal which accounts exist.
 - Failed password attempts are delayed (~300-500 ms each) and limited per
-  client IP; repeated failures temporarily block password logins from
-  that IP. New sessions are also rate limited per IP.
+  client (IPv4 address or IPv6 /64); repeated failures temporarily block
+  password logins from that client, and a global budget of 200 failures
+  per minute protects against distributed guessing. Concurrent bcrypt
+  checks are bounded and unauthenticated connections are capped (8 per
+  client, 256 total). New sessions are also rate limited per IP.
 - `<data>/authorized_keys` uses the OpenSSH format. **A listed key may log
   in under any user name**; the name is only used for display. Key
   options (`from=`, `command=`, `restrict`, ...) are not supported, so
   lines with options are ignored rather than silently granting broader
   access.
 - On first start, when no users or keys exist, vigil creates the user
-  `admin` with a random password and prints it once to standard output.
-  On systemd hosts this ends up in the journal: change it right away with
-  `vigil user passwd admin`, or create users with `vigil user add` before
-  the first start.
+  `admin` with a random password. On a terminal it is printed once; when
+  stdout is not a terminal (systemd, Docker) it is written to
+  `<data>/initial-admin-password` (mode `0600`) instead, so it never
+  reaches the journal or container logs. Change it right away with
+  `vigil user passwd admin` and delete the file, or create users with
+  `vigil user add` before the first start.
 - Prefer public keys over passwords where possible.
 - `vigil demo --serve --public` lets anyone log in. It refuses to run
-  with access to real servers (no shells, synthetic data only); do not
-  confuse it with `vigil serve`.
+  with access to real servers (no shells, synthetic data only), sessions
+  are read-only and the demo inventory is capped; do not confuse it with
+  `vigil serve`.
+
+### Files and keys
+
+- On Unix the data directory must be owned by the vigil user (it is
+  tightened to `0700` if looser). `users.json`, `id_ed25519`, the host key
+  and per-server keys must not be readable by group or others, and
+  `authorized_keys` must not be writable by them; files that fail these
+  checks are refused.
+- Per-server private keys can only be referenced by file name inside
+  `<data>/keys/`. Absolute paths, `..`, `~` and symlinks leaving the
+  directory are rejected, and key errors are reported generically, so a
+  dashboard user cannot make vigil authenticate with arbitrary files on
+  the manager or probe which files exist.
 
 ### Host keys (trust on first use)
 
